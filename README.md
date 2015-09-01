@@ -1,2 +1,2 @@
 # vlayout
-Declarative interface to mlpost
+Declarative interface to Cairo
