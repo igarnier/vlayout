@@ -1,0 +1,11 @@
+Name: vlayout
+Version: 0.1
+Authors: Ilias Garnier
+License: LGPL
+Synopsis: Declarative interface to Cairo
+obuild-ver: 1
+
+library vlayout
+  oflags: -annot
+  modules: commands, bbox, pt
+  src-dir: .
