@@ -7,6 +7,6 @@ obuild-ver: 1
 
 library vlayout
   oflags: -annot
-  modules: commands, bbox, pt
+  modules: vlayout
   src-dir: .
   BuildDepends: cairo
