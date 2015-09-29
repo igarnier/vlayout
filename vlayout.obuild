@@ -9,3 +9,4 @@ library vlayout
   oflags: -annot
   modules: commands, bbox, pt
   src-dir: .
+  BuildDepends: cairo
