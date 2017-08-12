@@ -5,6 +5,7 @@ val center : t -> Pt.t
 val width : t -> float
 val height : t -> float
 val join : t -> t -> t
+val translate : Pt.t -> t -> t
 val of_points : Pt.t list -> t
 val se : t -> Pt.t
 val sw : t -> Pt.t

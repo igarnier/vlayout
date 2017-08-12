@@ -9,4 +9,4 @@ library vlayout
   oflags: -annot
   modules: vlayout
   src-dir: .
-  BuildDepends: cairo
+  BuildDepends: cairo2

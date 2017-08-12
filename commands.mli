@@ -18,6 +18,7 @@ module type CommandsSig =
        | Color of float * float * float
        | Segment of Pt.t * Pt.t
        | Bezier of Pt.t * Pt.t * Pt.t * Pt.t
+       | Image of Pt.t * Image.t                                          
        | DeclPt of Pt.t * name
 
     type t = int option s
@@ -34,6 +35,7 @@ module type CommandsSig =
       val bezier :
         tag:'a -> p1:Pt.t -> c1:Pt.t -> p2:Pt.t -> c2:Pt.t -> 'a s
       val ubezier : tag:'a -> p1:Pt.t -> p2:Pt.t -> angle:float -> 'a s
+      val image : tag:'a -> p:Pt.t -> im:Image.t -> 'a s
       val declpt : tag:'a -> p:Pt.t -> n:name -> 'a s
     end
 
@@ -45,6 +47,7 @@ module type CommandsSig =
     val segment : p1:Pt.t -> p2:Pt.t -> untagged
     val bezier : p1:Pt.t -> c1:Pt.t -> p2:Pt.t -> c2:Pt.t -> untagged
     val ubezier : p1:Pt.t -> p2:Pt.t -> angle:float -> untagged
+    val image : p:Pt.t -> im:Image.t -> untagged
     val declpt : p:Pt.t -> n:name -> untagged
     val mid : Pt.t -> Pt.t -> Pt.t
     val bezier_midpoint : Pt.t -> Pt.t -> Pt.t -> Pt.t -> Pt.t

@@ -12,12 +12,13 @@ module type CommandsSig =
            
     type 'a s = { tag : 'a; desc : desc; }
      and desc =
-       Circle of Pt.t * float
+       | Circle of Pt.t * float
        | Box of Pt.t * Pt.t
        | Text of Pt.t * int * string
        | Color of float * float * float
        | Segment of Pt.t * Pt.t
        | Bezier of Pt.t * Pt.t * Pt.t * Pt.t
+       | Image of Pt.t * Image.t
        | DeclPt of Pt.t * name
 
     type t = int option s
@@ -34,6 +35,7 @@ module type CommandsSig =
       val bezier :
         tag:'a -> p1:Pt.t -> c1:Pt.t -> p2:Pt.t -> c2:Pt.t -> 'a s
       val ubezier : tag:'a -> p1:Pt.t -> p2:Pt.t -> angle:float -> 'a s
+      val image : tag:'a -> p:Pt.t -> im:Image.t -> 'a s
       val declpt : tag:'a -> p:Pt.t -> n:name -> 'a s
     end
 
@@ -45,6 +47,7 @@ module type CommandsSig =
     val segment : p1:Pt.t -> p2:Pt.t -> untagged
     val bezier : p1:Pt.t -> c1:Pt.t -> p2:Pt.t -> c2:Pt.t -> untagged
     val ubezier : p1:Pt.t -> p2:Pt.t -> angle:float -> untagged
+    val image : p:Pt.t -> im:Image.t -> untagged
     val declpt : p:Pt.t -> n:name -> untagged
     val mid : Pt.t -> Pt.t -> Pt.t
     val bezier_midpoint : Pt.t -> Pt.t -> Pt.t -> Pt.t -> Pt.t
@@ -143,6 +146,7 @@ module Make(N : Name) =
          | Color of float * float * float (* r, g, b *)
          | Segment of Pt.t * Pt.t
          | Bezier of Pt.t * Pt.t * Pt.t * Pt.t
+         | Image of Pt.t * Image.t
          | DeclPt of Pt.t * name
                               
       type t        = (int option) s
@@ -183,6 +187,8 @@ module Make(N : Name) =
           let ubezier ~tag:tag ~p1:p1 ~p2:p2 ~angle:angle =
             let (c1, c2) = ubezier_control_points p1 p2 angle in
             bezier ~tag:tag ~p1:p1 ~c1:c1 ~p2:p2 ~c2:c2
+
+          let image ~tag:tag ~p:p ~im:im = mktag tag (Image(p, im))
                    
           let declpt ~tag:tag ~p:p ~n:n = mktag tag  (DeclPt(p, n))
 
@@ -206,6 +212,8 @@ module Make(N : Name) =
       let bezier = Tagged.bezier ~tag:()
 
       let ubezier = Tagged.ubezier ~tag:()
+
+      let image = Tagged.image ~tag:()
                                    
       let declpt = Tagged.declpt ~tag:()
 
@@ -235,6 +243,8 @@ module Make(N : Name) =
            mid p1 p2
         | Bezier(p1, c1, p2, c2) ->
            bezier_midpoint p1 c1 p2 c2
+        | Image(pos, im) ->
+           pos
         | DeclPt(_, _)
         | Color(_, _, _) ->
            failwith "Commands.anchor_of: DeclPt and Color have no anchor"
@@ -274,6 +284,8 @@ module Make(N : Name) =
              sprintf "Bezier(%s, %s, %s, %s)"
                      (Pt.print p1) (Pt.print c1)
                      (Pt.print p2) (Pt.print c2)
+          | Image(p, im)  ->
+             sprintf "Image(%s, %d x %d)" (Pt.print p) (Image.xsize im) (Image.ysize im)
           | DeclPt(p, n) ->
              sprintf "DeclPt(%s, %s)" (Pt.print p) (N.print n)                   
         )         
@@ -305,6 +317,8 @@ module Make(N : Name) =
                box (pt (min x1 x2) (min y1 y2)) (pt (max x1 x2) (max y1 y2))
             | Bezier(p1, c1, p2, c2) ->
                Bbox.join (Bbox.box p1 c1) (Bbox.box p2 c2)
+            | Image(p, im) ->
+               Bbox.translate p (Image.bbox im)
             | Color _ ->
                empty
             | DeclPt(p, _) -> box p p
@@ -341,6 +355,8 @@ module Make(N : Name) =
                               Pt.plus p2 v,
                               Pt.plus c2 v)
                     | Color(_,_,_) -> x.desc
+                    | Image(p, im) ->
+                       Image(Pt.plus p v, im)
                     | DeclPt(p, n) ->
                        DeclPt(Pt.plus p v, n)
                   in
@@ -384,7 +400,8 @@ module Make(N : Name) =
            | Text(_, _, _)
            | Segment(_, _)
            | Bezier(_, _, _, _)
-           | Color(_, _,_ ) -> acc
+           | Color(_, _, _)
+           | Image(_, _) -> acc
            | DeclPt(p, n) ->
               NameMap.add n (p, c.tag) acc
           ) NameMap.empty cmds           

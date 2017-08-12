@@ -25,6 +25,12 @@ let join b1 b2 =
     maxs = Pt.pt (max b1.maxs.Pt.x b2.maxs.Pt.x) (max b1.maxs.Pt.y b2.maxs.Pt.y)
   }
 
+let translate p bbox =
+  {
+    mins = Pt.plus p bbox.mins;
+    maxs = Pt.plus p bbox.maxs
+  }
+
 let of_points pt_list =
   let (mins, maxs) =
     List.fold_left

@@ -1,4 +1,3 @@
-
 module Cairo(C : Commands.CommandsSig) =
   struct
 
@@ -15,7 +14,7 @@ module Cairo(C : Commands.CommandsSig) =
           Cairo.line_to ctx mins.x maxs.y;
           Cairo.line_to ctx maxs.x maxs.y;
           Cairo.line_to ctx maxs.x mins.y;
-          Cairo.close_path ctx;
+          Cairo.Path.close ctx;
           Cairo.stroke ctx
          )
       | C.Text(p, sz, text) ->
@@ -40,6 +39,11 @@ module Cairo(C : Commands.CommandsSig) =
           Cairo.curve_to ctx c1.x c1.y c2.x c2.y p2.x p2.y;
           Cairo.stroke ctx
          )
+      | C.Image(p, im) ->
+         let surf = Cairo.Image.create_for_data32 im in
+         let patt = Cairo.Pattern.create_for_surface surf in
+         Cairo.set_source ctx patt;
+         Cairo.paint ctx
       | C.DeclPt(_, _) -> ()
-
+                            
   end
