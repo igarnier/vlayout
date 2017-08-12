@@ -1,0 +1,18 @@
+opam-version: "1.2"
+maintainer: "ilias.gar@gmail.com"
+authors: ["Ilias Garnier"]
+homepage: "https://github.com/igarnier/vlayout"
+bug-reports: "https://github.com/igarnier/vlayout/issues"
+dev-repo: "git+https://github.com/igarnier/vlayout.git"
+license: "Apache-2.0"
+build: [
+  ["jbuilder" "build" "-p" name "-j" jobs]
+]
+depends: [
+  "jbuilder"                {build & >= "1.0+beta8"}
+  "cairo2"
+]
+available: [ ocaml-version >= "4.04.1" ]
+descr: "
+Declarative interface to Cairo.
+"
