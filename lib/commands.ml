@@ -4,135 +4,197 @@ module type Name =
     val compare : t -> t -> int
     val print : t -> string
   end
-                  
+
 module type CommandsSig =
   sig
 
     type name
-           
-    type 'a s = { tag : 'a; desc : desc; }
-     and desc =
-       | Circle of Pt.t * float
-       | Box of Pt.t * Pt.t
-       | Text of Pt.t * int * string
-       | Color of float * float * float
-       | Segment of Pt.t * Pt.t
-       | Bezier of Pt.t * Pt.t * Pt.t * Pt.t
-       | Image of Pt.t * Image.t
-       | DeclPt of Pt.t * name
 
-    type t = int option s
-    type untagged = unit s
+    type position  = { pos : Pt.t; relpos : relpos }
+     and relpos =
+       | North    
+       | West     
+       | South    
+       | East     
+       | SouthWest
+       | SouthEast
+       | NorthWest
+       | NorthEast
 
-    module Tagged :
-    sig
-      val mktag : 'a -> desc -> 'a s
-      val circle : tag:'a -> p:Pt.t -> radius:float -> 'a s
-      val box : tag:'a -> mins:Pt.t -> maxs:Pt.t -> 'a s
-      val text : tag:'a -> p:Pt.t -> sz:int -> s:string -> 'a s
-      val color : tag:'a -> r:float -> g:float -> b:float -> 'a s
-      val segment : tag:'a -> p1:Pt.t -> p2:Pt.t -> 'a s
-      val bezier :
-        tag:'a -> p1:Pt.t -> c1:Pt.t -> p2:Pt.t -> c2:Pt.t -> 'a s
-      val ubezier : tag:'a -> p1:Pt.t -> p2:Pt.t -> angle:float -> 'a s
-      val image : tag:'a -> p:Pt.t -> im:Image.t -> 'a s
-      val declpt : tag:'a -> p:Pt.t -> n:name -> 'a s
-    end
-
-    val mkunit : desc -> untagged
-    val circle : p:Pt.t -> radius:float -> untagged
-    val box : mins:Pt.t -> maxs:Pt.t -> untagged
-    val text : p:Pt.t -> sz:int -> s:string -> untagged
-    val color : r:float -> g:float -> b:float -> untagged
-    val segment : p1:Pt.t -> p2:Pt.t -> untagged
-    val bezier : p1:Pt.t -> c1:Pt.t -> p2:Pt.t -> c2:Pt.t -> untagged
-    val ubezier : p1:Pt.t -> p2:Pt.t -> angle:float -> untagged
-    val image : p:Pt.t -> im:Image.t -> untagged
-    val declpt : p:Pt.t -> n:name -> untagged
-    val mid : Pt.t -> Pt.t -> Pt.t
-    val bezier_midpoint : Pt.t -> Pt.t -> Pt.t -> Pt.t -> Pt.t
-    val anchor_of : 'a s -> Pt.t
-    val bouquet_of_segments : Pt.t -> Pt.t -> name list -> untagged list
-    val print_cmd : 'a s -> string
-                              
-    module Bbox :
-    sig
-      type t = Bbox.t = { mins : Pt.t; maxs : Pt.t; }
-      val box : Pt.t -> Pt.t -> t
-      val empty : t
-      val center : t -> Pt.t
-      val width : t -> float
-      val height : t -> float
-      val join : t -> t -> t
-      val of_points : Pt.t list -> t
-      val se : t -> Pt.t
-      val sw : t -> Pt.t
-      val ne : t -> Pt.t
-      val nw : t -> Pt.t
-      val print : t -> string
-      val of_command : 'a s -> t
-      val of_commands : 'a s list -> t
-    end
-
-    val tag : 'a s list -> 'b -> 'b s list
-    val untag : 'a s list -> untagged list
-    val translate : 'a s list -> Pt.t -> 'a s list
-    val center_to_page : float * float -> 'a s list -> 'a s list
-    val crop : 'a s list -> 'a s list
-                               
-    module Arrow :
-    sig
-      type style = {
-          startp : float;
-          endp : float;
-          arrowp : float;
-          legs : float;
-          angle : float;
+      type 'a s =
+        {
+          tag : 'a;
+          desc : desc;
         }
-      type t = {
-          start : name;
-          finish : name;
-          style : style;
-          smart : bool;
-        }
-      val mkarrowhead : float -> float -> Pt.t * Pt.t
-      val mkarrow : style -> Pt.t -> Pt.t -> untagged list
-      val mkarrow_curvy : style -> Pt.t -> Pt.t -> float -> untagged list
-      val to_segments : 'a list -> ('a * 'a) list
-      val mk_multisegment_arrow : style -> Pt.t list -> untagged list
-      val default_style : style
-      val mid_style : style
-    end
-      
-    type layout
-           
-    val cmd : name:int option -> untagged list -> layout
-    val hbox : deltax:float -> layout_list:layout list -> layout
-    val vbox : deltay:float -> layout_list:layout list -> layout
-    val arrow :
-      start:name -> finish:name -> sty:Arrow.style -> layout -> layout
-    val smart_arrow :
-      start:name -> finish:name -> sty:Arrow.style -> layout -> layout
-                                                                  
-    val halign :
-      ('a s list * Bbox.t) list -> float -> ('a s list * Bbox.t) list
-    val valign :
-      ('a s list * Bbox.t) list -> float -> ('a s list * Bbox.t) list
-                                                                 
-    exception Emit_error
+       and desc =
+         | Circle  of { center : Pt.t; radius : float }
+         | Box     of { mins : Pt.t; maxs : Pt.t }
+         | Text    of { pos : position; size : float; text : string }
+         | Color   of { r : float; g : float; b : float }
+         | Segment of { p1 : Pt.t; p2 : Pt.t }
+         | Bezier  of { p1 : Pt.t; c1 : Pt.t; p2 : Pt.t; c2 : Pt.t }
+         | Image   of { pos : Pt.t; image : Image.t }
+         | DeclPt  of { pt : Pt.t; name : name }
 
-    val emit_commands_with_bbox : layout -> t list * Bbox.t
-                                                       
-    val emit_commands : layout -> t list
-                                    
-    val emit_commands_centered : float * float -> layout -> t list
+      type t        = (int option) s
+      type untagged = unit s
+
+      val text_position : position -> float -> string -> Pt.t
 
   end
+                  
+(* module type CommandsSig = *)
+(*   sig *)
+
+(*     type name *)
+           
+(*     type 'a s = { tag : 'a; desc : desc; } *)
+(*      and desc = *)
+(*        | Circle of { center : Pt.t; radius : float } *)
+(*        | Box of Pt.t * Pt.t *)
+(*        | Text of Pt.t * float * string *)
+(*        | Color of float * float * float *)
+(*        | Segment of Pt.t * Pt.t *)
+(*        | Bezier of Pt.t * Pt.t * Pt.t * Pt.t *)
+(*        | Image of Pt.t * Image.t *)
+(*        | DeclPt of Pt.t * name *)
+
+(*     type t = int option s *)
+(*     type untagged = unit s *)
+
+(*     module Tagged : *)
+(*     sig *)
+(*       val mktag : 'a -> desc -> 'a s *)
+(*       val circle : tag:'a -> p:Pt.t -> radius:float -> 'a s *)
+(*       val box : tag:'a -> mins:Pt.t -> maxs:Pt.t -> 'a s *)
+(*       val text : tag:'a -> p:Pt.t -> sz:int -> s:string -> 'a s *)
+(*       val color : tag:'a -> r:float -> g:float -> b:float -> 'a s *)
+(*       val segment : tag:'a -> p1:Pt.t -> p2:Pt.t -> 'a s *)
+(*       val bezier : *)
+(*         tag:'a -> p1:Pt.t -> c1:Pt.t -> p2:Pt.t -> c2:Pt.t -> 'a s *)
+(*       val ubezier : tag:'a -> p1:Pt.t -> p2:Pt.t -> angle:float -> 'a s *)
+(*       val image : tag:'a -> p:Pt.t -> im:Image.t -> 'a s *)
+(*       val declpt : tag:'a -> p:Pt.t -> n:name -> 'a s *)
+(*     end *)
+
+(*     val mkunit : desc -> untagged *)
+(*     val circle : p:Pt.t -> radius:float -> untagged *)
+(*     val box : mins:Pt.t -> maxs:Pt.t -> untagged *)
+(*     val text : p:Pt.t -> sz:int -> s:string -> untagged *)
+(*     val color : r:float -> g:float -> b:float -> untagged *)
+(*     val segment : p1:Pt.t -> p2:Pt.t -> untagged *)
+(*     val bezier : p1:Pt.t -> c1:Pt.t -> p2:Pt.t -> c2:Pt.t -> untagged *)
+(*     val ubezier : p1:Pt.t -> p2:Pt.t -> angle:float -> untagged *)
+(*     val image : p:Pt.t -> im:Image.t -> untagged *)
+(*     val declpt : p:Pt.t -> n:name -> untagged *)
+(*     val mid : Pt.t -> Pt.t -> Pt.t *)
+(*     val bezier_midpoint : Pt.t -> Pt.t -> Pt.t -> Pt.t -> Pt.t *)
+(*     val anchor_of : 'a s -> Pt.t *)
+(*     val bouquet_of_segments : Pt.t -> Pt.t -> name list -> untagged list *)
+(*     val print_cmd : 'a s -> string *)
+                              
+(*     module Bbox : *)
+(*     sig *)
+(*       type t = Bbox.t = { mins : Pt.t; maxs : Pt.t; } *)
+(*       val box : Pt.t -> Pt.t -> t *)
+(*       val empty : t *)
+(*       val center : t -> Pt.t *)
+(*       val width : t -> float *)
+(*       val height : t -> float *)
+(*       val join : t -> t -> t *)
+(*       val of_points : Pt.t list -> t *)
+(*       val se : t -> Pt.t *)
+(*       val sw : t -> Pt.t *)
+(*       val ne : t -> Pt.t *)
+(*       val nw : t -> Pt.t *)
+(*       val print : t -> string *)
+(*       val of_command : 'a s -> t *)
+(*       val of_commands : 'a s list -> t *)
+(*     end *)
+
+(*     val tag : 'a s list -> 'b -> 'b s list *)
+(*     val untag : 'a s list -> untagged list *)
+(*     val translate : 'a s list -> Pt.t -> 'a s list *)
+(*     val center_to_page : float * float -> 'a s list -> 'a s list *)
+(*     val crop : 'a s list -> 'a s list *)
+                               
+(*     module Arrow : *)
+(*     sig *)
+(*       type style = { *)
+(*           startp : float; *)
+(*           endp : float; *)
+(*           arrowp : float; *)
+(*           legs : float; *)
+(*           angle : float; *)
+(*         } *)
+(*       type t = { *)
+(*           start : name; *)
+(*           finish : name; *)
+(*           style : style; *)
+(*           smart : bool; *)
+(*         } *)
+(*       val mkarrowhead : float -> float -> Pt.t * Pt.t *)
+(*       val mkarrow : style -> Pt.t -> Pt.t -> untagged list *)
+(*       val mkarrow_curvy : style -> Pt.t -> Pt.t -> float -> untagged list *)
+(*       val to_segments : 'a list -> ('a * 'a) list *)
+(*       val mk_multisegment_arrow : style -> Pt.t list -> untagged list *)
+(*       val default_style : style *)
+(*       val mid_style : style *)
+(*     end *)
+      
+(*     type layout *)
+           
+(*     val cmd : name:int option -> untagged list -> layout *)
+(*     val hbox : deltax:float -> layout_list:layout list -> layout *)
+(*     val vbox : deltay:float -> layout_list:layout list -> layout *)
+(*     val arrow : *)
+(*       start:name -> finish:name -> sty:Arrow.style -> layout -> layout *)
+(*     val smart_arrow : *)
+(*       start:name -> finish:name -> sty:Arrow.style -> layout -> layout *)
+                                                                  
+(*     val halign : *)
+(*       ('a s list * Bbox.t) list -> float -> ('a s list * Bbox.t) list *)
+(*     val valign : *)
+(*       ('a s list * Bbox.t) list -> float -> ('a s list * Bbox.t) list *)
+                                                                 
+(*     exception Emit_error *)
+
+(*     val emit_commands_with_bbox : layout -> t list * Bbox.t *)
+                                                       
+(*     val emit_commands : layout -> t list *)
+                                    
+(*     val emit_commands_centered : float * float -> layout -> t list *)
+
+(*   end *)
 
 module Make(N : Name) =
   (struct
 
       type name = N.t
+
+      type position  = { pos : Pt.t; relpos : relpos }
+       and relpos =
+        | North    
+        | West     
+        | South    
+        | East     
+        | SouthWest
+        | SouthEast
+        | NorthWest
+        | NorthEast
+
+      let point_of_position { pos } = pos
+
+      let print_position { pos; relpos } =
+        match relpos with
+        | North     -> Printf.sprintf "North(%s)" (Pt.print pos)
+        | West      -> Printf.sprintf "West(%s)" (Pt.print pos)
+        | South     -> Printf.sprintf "South(%s)" (Pt.print pos)
+        | East      -> Printf.sprintf "East(%s)" (Pt.print pos)
+        | SouthWest -> Printf.sprintf "SouthWest(%s)" (Pt.print pos)
+        | SouthEast -> Printf.sprintf "SouthEast(%s)" (Pt.print pos)
+        | NorthWest -> Printf.sprintf "NorthWest(%s)" (Pt.print pos)
+        | NorthEast -> Printf.sprintf "NorthEast(%s)" (Pt.print pos)
                     
       type 'a s =
         {
@@ -140,18 +202,17 @@ module Make(N : Name) =
           desc : desc;
         }
        and desc =
-         | Circle of Pt.t * float         (* x, y, radius *)
-         | Box of Pt.t * Pt.t             (* mins; maxs *)
-         | Text of Pt.t * int * string 
-         | Color of float * float * float (* r, g, b *)
-         | Segment of Pt.t * Pt.t
-         | Bezier of Pt.t * Pt.t * Pt.t * Pt.t
-         | Image of Pt.t * Image.t
-         | DeclPt of Pt.t * name
+         | Circle  of { center : Pt.t; radius : float }
+         | Box     of { mins : Pt.t; maxs : Pt.t }
+         | Text    of { pos : position; size : float; text : string }
+         | Color   of { r : float; g : float; b : float }
+         | Segment of { p1 : Pt.t; p2 : Pt.t }
+         | Bezier  of { p1 : Pt.t; c1 : Pt.t; p2 : Pt.t; c2 : Pt.t }
+         | Image   of { pos : Pt.t; image : Image.t }
+         | DeclPt  of { pt : Pt.t; name : name }
                               
       type t        = (int option) s
       type untagged = unit s
-
 
 
       let ubezier_control_points ~p1:p1 ~p2:p2 ~angle:angle =
@@ -172,26 +233,33 @@ module Make(N : Name) =
 
           let mktag tag desc = { tag; desc }
                                  
-          let circle ~tag:tag ~p:p ~radius:r = mktag tag (Circle(p, r))
+          let circle ~tag ~center ~radius =
+            mktag tag (Circle { center; radius })
 
-          let box ~tag:tag ~mins:p1 ~maxs:p2 = mktag tag  (Box(p1, p2))
+          let box ~tag ~mins ~maxs =
+            mktag tag (Box { mins; maxs })
 
-          let text ~tag:tag ~p:p ~sz:sz ~s:s = mktag tag  (Text(p, sz, s))
+          let text ~tag ~pos ~size ~text =
+            mktag tag (Text { pos; size; text })
 
-          let color ~tag:tag ~r:r ~g:g ~b:b = mktag tag  (Color(r, g, b))
+          let color ~tag ~r ~g ~b =
+            mktag tag (Color { r; g; b })
 
-          let segment ~tag:tag ~p1:p1 ~p2:p2 = mktag tag  (Segment(p1, p2))
-
-          let bezier ~tag:tag ~p1:p1 ~c1:c1 ~p2:p2 ~c2:c2 = mktag tag  (Bezier(p1, c1, p2, c2))
+          let segment ~tag ~p1 ~p2 =
+            mktag tag (Segment { p1; p2 })
+                  
+          let bezier ~tag ~p1 ~c1 ~p2 ~c2 =
+            mktag tag (Bezier { p1; c1; p2; c2 })
                                                                   
-          let ubezier ~tag:tag ~p1:p1 ~p2:p2 ~angle:angle =
+          let ubezier ~tag ~p1 ~p2 ~angle =
             let (c1, c2) = ubezier_control_points p1 p2 angle in
             bezier ~tag:tag ~p1:p1 ~c1:c1 ~p2:p2 ~c2:c2
 
-          let image ~tag:tag ~p:p ~im:im = mktag tag (Image(p, im))
+          let image ~tag ~pos ~image =
+            mktag tag (Image { pos; image })
                    
-          let declpt ~tag:tag ~p:p ~n:n = mktag tag  (DeclPt(p, n))
-
+          let declpt ~tag ~pt ~name =
+            mktag tag (DeclPt { pt; name })
                                                 
         end
           
@@ -233,20 +301,14 @@ module Make(N : Name) =
             
       let anchor_of c =
         match c.desc with
-        | Circle(center, _) ->
-           center
-        | Box(p1, p2) ->
-           mid p1 p2
-        | Text(pos, sz, _) ->
-           pos
-        | Segment(p1, p2) ->
-           mid p1 p2
-        | Bezier(p1, c1, p2, c2) ->
+        | Circle { center }  -> center
+        | Box { mins; maxs } -> mid mins maxs
+        | Text { pos }       -> point_of_position pos
+        | Segment { p1; p2 } -> mid p1 p2
+        | Bezier { p1; c1; p2; c2 } ->
            bezier_midpoint p1 c1 p2 c2
-        | Image(pos, im) ->
-           pos
-        | DeclPt(_, _)
-        | Color(_, _, _) ->
+        | Image { pos }      ->  pos
+        | DeclPt _ | Color _ ->
            failwith "Commands.anchor_of: DeclPt and Color have no anchor"
 
       let bouquet_of_segments start finish names =
@@ -270,28 +332,54 @@ module Make(N : Name) =
       let print_cmd c =
         Printf.(
           match c.desc with
-          | Circle(p, radius) ->
-             sprintf "Circle(%s, %f)" (Pt.print p) radius
-          | Box(p1, p2) ->
-             sprintf "Box(%s, %s)" (Pt.print p1) (Pt.print p2)
-          | Text(p, sz, txt) ->
-             sprintf "Text(%s, %d, %s)" (Pt.print p) sz txt
-          | Color(r, g, b) ->
+          | Circle { center; radius } ->
+             sprintf "Circle(%s, %f)" (Pt.print center) radius
+          | Box { mins; maxs } ->
+             sprintf "Box(%s, %s)" (Pt.print mins) (Pt.print maxs)
+          | Text { pos; size; text } ->
+             sprintf "Text(%s, %f, %s)" (print_position pos) size text
+          | Color { r; g; b } ->
              sprintf "Color(%f, %f, %f)" r g b
-          | Segment(p1, p2) ->
+          | Segment { p1; p2 } ->
              sprintf "Segment(%s, %s)" (Pt.print p1) (Pt.print p2)
-          | Bezier(p1, c1, p2, c2) ->
+          | Bezier { p1; c1; p2; c2 } ->
              sprintf "Bezier(%s, %s, %s, %s)"
                      (Pt.print p1) (Pt.print c1)
                      (Pt.print p2) (Pt.print c2)
-          | Image(p, im)  ->
-             sprintf "Image(%s, %d x %d)" (Pt.print p) (Image.xsize im) (Image.ysize im)
-          | DeclPt(p, n) ->
-             sprintf "DeclPt(%s, %s)" (Pt.print p) (N.print n)                   
+          | Image { pos; image } ->
+             sprintf "Image(%s, %d x %d)"
+                     (Pt.print pos) (Image.xsize image) (Image.ysize image)
+          | DeclPt { pt; name } ->
+             sprintf "DeclPt(%s, %s)" (Pt.print pt) (N.print name)
         )         
               
       module NameMap = Map.Make(N)
                                
+      let base_of_positioned_box h w { pos; relpos } =
+        let { Pt.x; y } = pos in
+        match relpos with
+        (* x = base_x + w / 2, y = base_y + h *)              
+        | North -> Pt.pt (x -. w *. 0.5) (y -. h)
+        (* x = base_x, y = base_y + h / 2 *)                                      
+        | West  -> Pt.pt x (y -. h *. 0.5)
+        (* x = base_x + w /2, y = base_y *)
+        | South -> Pt.pt (x -. w *. 0.5) y
+        (* x = base_x + w, y = base_y + h / 2 *)
+        | East  -> Pt.pt (x -. w) (y -. h *. 0.5)
+        (* x = base_x, y = base_y  *)
+        | SouthWest -> Pt.pt x y
+        (* x = base_x + w, y = base_y *)
+        | SouthEast -> Pt.pt (x -. w) y
+        (* x = base_x, y = base_y + h *)
+        | NorthWest -> Pt.pt x (y -. h)
+        (* x = base_x + w, y = base_y + h*)
+        | NorthEast -> Pt.pt (x -. w) (y -. h)
+
+      let text_position pos size text =
+        let max_h = size in
+        let max_w = max_h *. (float (String.length text)) in
+        base_of_positioned_box max_h max_w pos
+
       module Bbox =
         struct
 
@@ -301,27 +389,30 @@ module Make(N : Name) =
                  
           let rec of_command c =
             match c.desc with
-            | Circle( { x; y }, radius) ->
-               box { x = x -. radius; y = y -. radius } { x = x +. radius; y = y +. radius }
-            | Box(mins, maxs) ->
+            | Circle { center = { x; y }; radius } ->
+               box
+                 { x = x -. radius; y = y -. radius }
+                 { x = x +. radius; y = y +. radius }
+            | Box { mins; maxs } ->
                box mins maxs
-            | Text(p, sz, text) ->
-               (* magical constants ...*)
-               let max_h = (float sz) in
+            | Text { pos; size; text } ->
+               let max_h = size in
                let max_w = max_h *. (float (String.length text)) in
-               let base  = p in
+               let base  = text_position pos size text in
                box base (plus base (pt max_w max_h))
-            | Segment(p1, p2) ->
+            | Segment { p1; p2 } ->
                let { x = x1; y = y1 } = p1
                and { x = x2; y = y2 } = p2 in
-               box (pt (min x1 x2) (min y1 y2)) (pt (max x1 x2) (max y1 y2))
-            | Bezier(p1, c1, p2, c2) ->
-               Bbox.join (Bbox.box p1 c1) (Bbox.box p2 c2)
-            | Image(p, im) ->
-               Bbox.translate p (Image.bbox im)
+               box
+                 (pt (min x1 x2) (min y1 y2))
+                 (pt (max x1 x2) (max y1 y2))
+            | Bezier { p1; c1; p2; c2 } ->
+               join (box p1 c1) (box p2 c2)
+            | Image { pos; image } ->
+               Bbox.translate pos (Image.bbox image)
             | Color _ ->
                empty
-            | DeclPt(p, _) -> box p p
+            | DeclPt { pt } -> box pt pt
 
           let of_commands cl =
             let bboxes = List.map of_command cl in
@@ -341,24 +432,24 @@ module Make(N : Name) =
         List.map (fun x ->
                   let desc =
                     match x.desc with
-                    | Circle(pt, radius) ->
-                       Circle(Pt.plus pt v, radius)
-                    | Box(mins, maxs) ->
-                       Box(Pt.plus mins v, Pt.plus maxs v)
-                    | Text(p, sz, str) ->
-                       Text(Pt.plus p v, sz, str)
-                    | Segment(p1, p2) ->
-                       Segment(Pt.plus p1 v, Pt.plus p2 v)
-                    | Bezier(p1, c1, p2, c2) ->
-                       Bezier(Pt.plus p1 v,
-                              Pt.plus c1 v,
-                              Pt.plus p2 v,
-                              Pt.plus c2 v)
-                    | Color(_,_,_) -> x.desc
-                    | Image(p, im) ->
-                       Image(Pt.plus p v, im)
-                    | DeclPt(p, n) ->
-                       DeclPt(Pt.plus p v, n)
+                    | Circle { center; radius } ->
+                       Circle { center = Pt.plus center v; radius }
+                    | Box { mins; maxs } ->
+                       Box { mins = Pt.plus mins v; maxs = Pt.plus maxs v }
+                    | Text { pos; size; text } ->
+                       Text { pos = { pos = Pt.plus pos.pos v; relpos = pos.relpos }; size; text }
+                    | Segment { p1; p2 } ->
+                       Segment { p1 = Pt.plus p1 v; p2 = Pt.plus p2 v }
+                    | Bezier { p1; c1; p2; c2 } ->
+                       Bezier { p1 = Pt.plus p1 v;
+                                c1 = Pt.plus c1 v;
+                                p2 = Pt.plus p2 v;
+                                c2 = Pt.plus c2 v }
+                    | Color _ -> x.desc
+                    | Image { pos; image } ->
+                       Image { pos = Pt.plus pos v; image }
+                    | DeclPt { pt; name } ->
+                       DeclPt { pt = Pt.plus pt v; name }
                   in
                   { x with desc }
                  ) commands
@@ -395,15 +486,15 @@ module Make(N : Name) =
         List.fold_left
           (fun acc c ->
            match c.desc with
-           | Circle(_,_)
-           | Box(_, _)
-           | Text(_, _, _)
-           | Segment(_, _)
-           | Bezier(_, _, _, _)
-           | Color(_, _, _)
-           | Image(_, _) -> acc
-           | DeclPt(p, n) ->
-              NameMap.add n (p, c.tag) acc
+           | Circle _
+           | Box _
+           | Text _
+           | Segment _
+           | Bezier _
+           | Color _
+           | Image _ -> acc
+           | DeclPt { pt; name } ->
+              NameMap.add name (pt, c.tag) acc
           ) NameMap.empty cmds           
 
       (* Arrows *)
@@ -745,5 +836,5 @@ module Make(N : Name) =
         center_to_page (w,h) cmds
                        
 
-    end : CommandsSig with type name = N.t)
+    end (* : CommandsSig with type name = N.t *))
     
