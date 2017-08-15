@@ -1,3 +1,8 @@
+external create_for_data32_unsafe : data:Cairo.Image.data32 ->
+                                    Cairo.Image.format -> width:int -> height:int -> stride:int -> Cairo.Surface.t
+    = "caml_cairo_image_surface_create_for_data32"
+
+
 module Cairo(C : Commands.CommandsSig) =
   struct
 
@@ -44,10 +49,20 @@ module Cairo(C : Commands.CommandsSig) =
           Cairo.stroke ctx
          )
       | C.Image { pos; image } ->
-         let surf = Cairo.Image.create_for_data32 image in
+         Cairo.save ctx;
+         let bbox = C.Bbox.of_command cmd in
+         let ()   = Cairo.rectangle ctx ~x:bbox.mins.x ~y:bbox.mins.y ~w:(Bbox.width bbox) ~h:(Bbox.height bbox) in
+         let ()   = Cairo.clip ctx in
+         let xsize  = Image.xsize image in
+         let ysize  = Image.ysize image in
+         let pixels = Bigarray.reshape_2 (Bigarray.genarray_of_array1 (Image.pixels image)) xsize ysize in
+         let surf   = Cairo.Image.create_for_data32 ~alpha:false pixels in
          let patt = Cairo.Pattern.create_for_surface surf in
+         let matrix = Cairo.Matrix.init_translate ~x:(-. bbox.mins.x) ~y:(-. bbox.mins.y) in 
+         Cairo.Pattern.set_matrix patt matrix;
          Cairo.set_source ctx patt;
-         Cairo.paint ctx
+         Cairo.paint ctx;
+         Cairo.restore ctx
       | C.DeclPt { pt; name } -> ()
                             
   end

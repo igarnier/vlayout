@@ -1,17 +1,25 @@
-
-type t = (int32, Bigarray.int32_elt, Bigarray.c_layout) Bigarray.Array2.t
-
+type t =
+  {
+    pixels : (int32, Bigarray.int32_elt, Bigarray.c_layout) Bigarray.Array1.t;
+    xsize  : int;
+    ysize  : int
+  }
 
 let create xsize ysize =
-  Bigarray.Array2.create Bigarray.int32 Bigarray.c_layout xsize ysize
+  let pixels = Bigarray.Array1.create Bigarray.int32 Bigarray.c_layout (xsize *  ysize) in
+  { pixels; xsize; ysize }
 
-let xsize data = Bigarray.Array2.dim1 data (* number of lines = x *)
+let xsize { xsize } = xsize
                                       
-let ysize data = Bigarray.Array2.dim2 data (* number of columns = y *)
+let ysize { ysize } = ysize
 
-let bbox data =
-  Bbox.box Pt.zero (Pt.pt (float (xsize data)) (float (ysize data)))
+let pixels { pixels } = pixels
 
-let get im x y = im.{x, y}
+let bbox { xsize; ysize } =
+  Bbox.box Pt.zero (Pt.pt (float xsize) (float ysize))
 
-let set im x y clr = im.{x, y} <- clr
+let get { pixels; xsize; ysize } x y =
+  pixels.{ y * xsize + x }
+
+let set { pixels; xsize; ysize } x y clr = pixels.{ y * xsize + x} <- clr
+                                                                        
