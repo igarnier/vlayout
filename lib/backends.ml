@@ -75,16 +75,17 @@ module Cairo(C : Commands.CommandsSig) =
       match cmd.C.desc with
       | C.Circle { center; radius } ->
          let { Pt.x; y } = center in
-         Cairo.save ctx;
-         Cairo.translate ctx x y;
-         Cairo.scale ctx ~x:radius ~y:radius;
+         Cairo.arc ctx ~x ~y ~r:radius ~a1:0.0 ~a2:(2.0 *. Tools.pi);
+         (* Cairo.save ctx; *)
+         (* Cairo.translate ctx x y; *)
+         (* Cairo.scale ctx ~x:radius ~y:radius; *)
          (* Cairo.arc ctx ~x:0.0 ~y:0.0 ~r:1.0 ~a1:0.0 ~a2:(2.0 *. Tools.pi); *)
          (* translate cr (x +. width /. 2.) (y +. height /. 2.); *)
          (* scale cr (width /. 2.) (height /. 2.); *)
          (* arc cr 0. 0. 1. 0. (2 * pi); *)
          
-         Cairo.arc ctx 0.0 0.0 1.0 0.0 (2.0 *. Tools.pi);
-         Cairo.restore ctx;
+         (* Cairo.arc ctx 0.0 0.0 1.0 0.0 (2.0 *. Tools.pi); *)
+         (* Cairo.restore ctx; *)
          (* Cairo.translate ctx x y; *)
          (* Cairo.arc ctx 0.0 0.0 radius 0.0 (2.0 *. Tools.pi); *)
          (* Cairo.translate ctx (-. x) (-.y); *)
