@@ -54,4 +54,10 @@ let pmin p1 p2 =
 
 let pmax p1 p2 =
   pt (max p1.x p2.x) (max p1.y p2.y)
-    
+
+let (+)        = plus
+let (-)        = minus
+let ( *| )     = scale
+let ( |* ) s p = scale p s
+let (~-) p     = scale p (-. 1.0)
+

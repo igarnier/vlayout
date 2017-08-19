@@ -18,3 +18,9 @@ val rotate_90_ccw : t -> t
 val cross : t -> t -> float
 val pmin : t -> t -> t
 val pmax : t -> t -> t
+
+val (+) : t -> t -> t
+val (-) : t -> t -> t
+val ( *| ) : t -> float -> t
+val ( |* ) : float -> t -> t
+val (~-) : t -> t
