@@ -24,13 +24,18 @@ let empty_box clr width height =
     ~style
     ~subcommands:[ U.box ~mins:Pt.zero ~maxs:(Pt.pt width height) ]
 
-
 let filled_box stroke_clr filled_clr width height =
   let style = Style.make ~stroke:(Style.solid_stroke stroke_clr) ~fill:(Some (Style.solid_stroke filled_clr)) in
   U.style
     ~style
     ~subcommands:[ U.box ~mins:Pt.zero ~maxs:(Pt.pt width height) ]
- 
+
+let hgradient_box clr1 clr2 width height =
+  let style = Style.make ~stroke:(Style.(solid_stroke black)) ~fill:(Some (Style.horizontal_gradient clr1 clr2)) in
+  U.style
+    ~style
+    ~subcommands:[ U.box ~mins:Pt.zero ~maxs:(Pt.pt width height) ]
+    
 let vgradient_box clr1 clr2 width height =
   let style = Style.make ~stroke:(Style.(solid_stroke black)) ~fill:(Some (Style.vertical_gradient clr1 clr2)) in
   U.style
@@ -48,28 +53,68 @@ let hgradient_circle clr1 clr2 radius =
   U.style
     ~style
     ~subcommands:[ U.circle ~center:Pt.zero ~radius ]
+
+let random_color () =
+  let r = Random.float 1.0 in
+  let g = Random.float 1.0 in
+  let b = Random.float 1.0 in
+  Style.rgb r g b
+
+let random_float () =
+  let f = Random.float 10.0 in
+  if Random.bool () then
+    f
+  else
+    -. f
+
+let random_box_size () =
+  let w = 30.0 +. (random_float ()) in
+  let h = 30.0 +. (random_float ()) in
+  (w, h)
     
-    
-let commands =
-  C.(
-    let h =
-      hbox
+let random_box () =
+  let i = Random.int 6 in
+  match i with
+  | 0 ->
+     let w, h = random_box_size () in
+     empty_box (random_color ()) w h
+  | 1 ->
+     let w, h = random_box_size () in
+     filled_box (random_color ()) (random_color ()) w h
+  | 2 ->
+     let w, h = random_box_size () in
+     hgradient_box (random_color ()) (random_color ()) w h
+  | 3 ->
+     let w, h = random_box_size () in
+     vgradient_box (random_color ()) (random_color ()) w h
+  | 4 ->
+     let radius = 2.0 *. (random_float ()) in
+     vgradient_circle (random_color ()) (random_color ()) radius
+  | 5 ->
+     let radius = 2.0 *. (random_float ()) in
+     hgradient_circle (random_color ()) (random_color ()) radius
+  | _ ->
+     failwith ""
+
+let rec random_layout depth =
+  if depth = 0 then
+    C.cmd ~name:None [random_box ()]
+  else
+    let l1 = random_layout (depth - 1) in
+    let l2 = random_layout (depth - 1) in
+    if Random.bool () then
+      C.hbox
         ~deltax:10.0
-        ~layout_list:[
-          cmd ~name:None [empty_box Style.black 50.0 50.0];
-          cmd ~name:None [filled_box Style.black Style.red 50.0 50.0];
-          cmd ~name:None [vgradient_box Style.black Style.red 50.0 50.0];        
-        ]
-    in
-    vbox
-      ~deltay:10.0
-      ~layout_list:[
-        cmd ~name:None [hgradient_circle Style.red Style.blue 30.0];
-        h
-      ]
+        ~layout_list:[ l1; l2 ]
+    else
+      C.vbox
+        ~deltay:10.0
+        ~layout_list:[ l1; l2 ]
 
-  )
+let _ = Random.init 19
+let commands = random_layout 7
 
+                             
 let process_layout xmargin ymargin layout =
   let (cmds, bbox) = C.emit_commands_with_bbox layout in
   let w    = xmargin +. (Bbox.width bbox)
