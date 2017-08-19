@@ -14,45 +14,43 @@ module Name =
 
 module C = Commands.Make(Name)
 
-module U = C.Untagged
-
 module B = Backends.Cairo(C)
 
 let empty_box clr width height =
   let style = Style.make ~stroke:(Style.solid_stroke clr) ~fill:None in
-  U.style
+  C.style
     ~style
-    ~subcommands:[ U.box ~mins:Pt.zero ~maxs:(Pt.pt width height) ]
+    ~subcommands:[ C.box ~mins:Pt.zero ~maxs:(Pt.pt width height) ]
 
 let filled_box stroke_clr filled_clr width height =
   let style = Style.make ~stroke:(Style.solid_stroke stroke_clr) ~fill:(Some (Style.solid_stroke filled_clr)) in
-  U.style
+  C.style
     ~style
-    ~subcommands:[ U.box ~mins:Pt.zero ~maxs:(Pt.pt width height) ]
+    ~subcommands:[ C.box ~mins:Pt.zero ~maxs:(Pt.pt width height) ]
 
 let hgradient_box clr1 clr2 width height =
   let style = Style.make ~stroke:(Style.(solid_stroke black)) ~fill:(Some (Style.horizontal_gradient clr1 clr2)) in
-  U.style
+  C.style
     ~style
-    ~subcommands:[ U.box ~mins:Pt.zero ~maxs:(Pt.pt width height) ]
+    ~subcommands:[ C.box ~mins:Pt.zero ~maxs:(Pt.pt width height) ]
     
 let vgradient_box clr1 clr2 width height =
   let style = Style.make ~stroke:(Style.(solid_stroke black)) ~fill:(Some (Style.vertical_gradient clr1 clr2)) in
-  U.style
+  C.style
     ~style
-    ~subcommands:[ U.box ~mins:Pt.zero ~maxs:(Pt.pt width height) ]
+    ~subcommands:[ C.box ~mins:Pt.zero ~maxs:(Pt.pt width height) ]
 
 let vgradient_circle clr1 clr2 radius =
   let style = Style.make ~stroke:(Style.(solid_stroke black)) ~fill:(Some (Style.vertical_gradient clr1 clr2)) in
-  U.style
+  C.style
     ~style
-    ~subcommands:[ U.circle ~center:Pt.zero ~radius ]
+    ~subcommands:[ C.circle ~center:Pt.zero ~radius ]
 
 let hgradient_circle clr1 clr2 radius =
   let style = Style.make ~stroke:(Style.(solid_stroke black)) ~fill:(Some (Style.horizontal_gradient clr1 clr2)) in
-  U.style
+  C.style
     ~style
-    ~subcommands:[ U.circle ~center:Pt.zero ~radius ]
+    ~subcommands:[ C.circle ~center:Pt.zero ~radius ]
 
 let random_color () =
   let r = Random.float 1.0 in

@@ -246,64 +246,38 @@ module Make(N : Name) =
 
     let mktag tag desc = { tag; desc }
                            
-    let circle ~tag ~center ~radius =
-      mktag tag (Circle { center; radius })
+    let circle ~center ~radius =
+      mktag None (Circle { center; radius })
 
-    let box ~tag ~mins ~maxs =
-      mktag tag (Box { mins; maxs })
+    let box ~mins ~maxs =
+      mktag None (Box { mins; maxs })
 
-    let text ~tag ~pos ~size ~text =
-      mktag tag (Text { pos; size; text })
+    let text ~pos ~size ~text =
+      mktag None (Text { pos; size; text })
 
-    let style ~tag ~style ~subcommands =
-      mktag tag (Style { style; subcommands })
+    let style ~style ~subcommands =
+      mktag None (Style { style; subcommands })
 
     (* let color ~tag ~r ~g ~b = *)
     (*   pattern tag Pattern.(Solid { c = { r; g; b } }) *)
 
-    let segment ~tag ~p1 ~p2 =
-      mktag tag (Segment { p1; p2 })
+    let segment ~p1 ~p2 =
+      mktag None (Segment { p1; p2 })
             
-    let bezier ~tag ~p1 ~c1 ~p2 ~c2 =
-      mktag tag (Bezier { p1; c1; p2; c2 })
+    let bezier ~p1 ~c1 ~p2 ~c2 =
+      mktag None (Bezier { p1; c1; p2; c2 })
             
-    let ubezier ~tag ~p1 ~p2 ~angle =
+    let ubezier ~p1 ~p2 ~angle =
       let (c1, c2) = ubezier_control_points p1 p2 angle in
-      bezier ~tag:tag ~p1:p1 ~c1:c1 ~p2:p2 ~c2:c2
+      bezier ~p1:p1 ~c1:c1 ~p2:p2 ~c2:c2
 
-    let image ~tag ~pos ~image =
-      mktag tag (Image { pos; image })
+    let image ~pos ~image =
+      mktag None (Image { pos; image })
             
-    let declpt ~tag ~pt ~name =
-      mktag tag (DeclPt { pt; name })
+    let declpt ~pt ~name =
+      mktag None (DeclPt { pt; name })
             
-    (* public interface for creating untagged commands. *)
-    module Untagged =
-      struct
-
-        let circle = circle ~tag:None
-
-        let box = box ~tag:None
-
-        let text = text ~tag:None
-
-        let style = style ~tag:None                             
-
-        (* let color = color ~tag:None *)
-
-        let segment = segment ~tag:None
-
-        let bezier = bezier ~tag:None
-
-        let ubezier = ubezier ~tag:None
-
-        let image = image ~tag:None
-                          
-        let declpt = declpt ~tag:None
-
-      end
-    (* Each basic command (type 'a s) is associated to a designated point we call the "anchor"  *)
-
+    (* Each basic command (type t) is associated to a designated point we call the "anchor"  *)
     let mid a b =
       Pt.barycenter a b
                     
@@ -329,7 +303,6 @@ module Make(N : Name) =
          failwith "Commands.anchor_of: DeclPt and Style have no anchor"
 
     let bouquet_of_segments start finish names =
-      let open Untagged in
       match names with
       | [] -> 
          failwith "Commands.bouquet_of_segments: empty list of names"
@@ -562,13 +535,11 @@ module Make(N : Name) =
           let arrow_pos             = Pt.plus start (Pt.scale vec style.arrowp) in
           let left_leg              = Pt.plus arrow_pos (Pt.rotate_vector vec_angle left_leg) in
           let right_leg             = Pt.plus arrow_pos (Pt.rotate_vector vec_angle right_leg) in
-          Untagged.(
-            [
-              segment shaft_start shaft_finish;
-              segment arrow_pos left_leg;
-              segment arrow_pos right_leg
-            ]
-          )
+          [
+            segment shaft_start shaft_finish;
+            segment arrow_pos left_leg;
+            segment arrow_pos right_leg
+          ]
 
         (* let mkarrow legs_length legs_angle start finish = *)
         let mkarrow_curvy style start finish angle =
@@ -592,13 +563,11 @@ module Make(N : Name) =
             in
             let left_leg  = Pt.plus arrow_pos (Pt.rotate_vector rot_angle left_leg) in
             let right_leg = Pt.plus arrow_pos (Pt.rotate_vector rot_angle right_leg) in
-            Untagged.(
-              [
-                bezier shaft_start c1 shaft_finish c2;
-                segment arrow_pos left_leg;
-                segment arrow_pos right_leg
-              ]
-            )
+            [
+              bezier shaft_start c1 shaft_finish c2;
+              segment arrow_pos left_leg;
+              segment arrow_pos right_leg
+            ]
 
         (* multi-segments arrows *)
 
@@ -630,17 +599,15 @@ module Make(N : Name) =
              let arrow_pos             = Pt.plus start (Pt.scale vec style.arrowp) in
              let left_leg              = Pt.plus arrow_pos (Pt.rotate_vector vec_angle left_leg) in
              let right_leg             = Pt.plus arrow_pos (Pt.rotate_vector vec_angle right_leg) in
-             Untagged.(
-               let arrow =
-                 [
-                   segment pn shaft_finish;
-                   segment arrow_pos left_leg;
-                   segment arrow_pos right_leg
-                 ]
-               in
-               let segments = List.map (fun (p1, p2) -> segment p1 p2) lt in
-               segments @ arrow
-             )     
+             let arrow =
+               [
+                 segment pn shaft_finish;
+                 segment arrow_pos left_leg;
+                 segment arrow_pos right_leg
+               ]
+             in
+             let segments = List.map (fun (p1, p2) -> segment p1 p2) lt in
+             segments @ arrow
 
         let default_style =
           {
