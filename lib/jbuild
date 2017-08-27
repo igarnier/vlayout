@@ -3,4 +3,4 @@
 (library
  ((name        vlayout)
   (public_name vlayout)
-  (libraries (cairo2))))
+  (libraries (dolog cairo2))))
