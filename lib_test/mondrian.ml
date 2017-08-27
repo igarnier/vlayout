@@ -29,25 +29,25 @@ let filled_box stroke_clr filled_clr width height =
     ~subcommands:[ C.box ~mins:Pt.zero ~maxs:(Pt.pt width height) ]
 
 let hgradient_box clr1 clr2 width height =
-  let style = Style.make ~stroke:(Style.(solid_stroke black)) ~fill:(Some (Style.horizontal_gradient clr1 clr2)) in
+  let style = Style.make ~stroke:(Style.(solid_stroke black)) ~fill:(Some (Style.simple_horizontal_gradient clr1 clr2)) in
   C.style
     ~style
     ~subcommands:[ C.box ~mins:Pt.zero ~maxs:(Pt.pt width height) ]
     
 let vgradient_box clr1 clr2 width height =
-  let style = Style.make ~stroke:(Style.(solid_stroke black)) ~fill:(Some (Style.vertical_gradient clr1 clr2)) in
+  let style = Style.make ~stroke:(Style.(solid_stroke black)) ~fill:(Some (Style.simple_vertical_gradient clr1 clr2)) in
   C.style
     ~style
     ~subcommands:[ C.box ~mins:Pt.zero ~maxs:(Pt.pt width height) ]
 
 let vgradient_circle clr1 clr2 radius =
-  let style = Style.make ~stroke:(Style.(solid_stroke black)) ~fill:(Some (Style.vertical_gradient clr1 clr2)) in
+  let style = Style.make ~stroke:(Style.(solid_stroke black)) ~fill:(Some (Style.simple_vertical_gradient clr1 clr2)) in
   C.style
     ~style
     ~subcommands:[ C.circle ~center:Pt.zero ~radius ]
 
 let hgradient_circle clr1 clr2 radius =
-  let style = Style.make ~stroke:(Style.(solid_stroke black)) ~fill:(Some (Style.horizontal_gradient clr1 clr2)) in
+  let style = Style.make ~stroke:(Style.(solid_stroke black)) ~fill:(Some (Style.simple_horizontal_gradient clr1 clr2)) in
   C.style
     ~style
     ~subcommands:[ C.circle ~center:Pt.zero ~radius ]
