@@ -1,9 +1,40 @@
+module Log = Log.Make(struct let section = "Style" end)
+
 (** r/g/b/ color; the values are meant to be in [0,1]. As an example, the color red
     corresponds to { r = 1.0; g = 0.0; b = 0.0 } and the color blue to
     { r = 0.0; g = 0.0; b = 1.0 }
 *)
 type color = { r : float; g : float; b : float }
 
+let r { r } = r
+let g { g } = g
+let b { b } = b
+
+(** Make an rgb color. *)
+let rgb r g b = { r; g; b }
+
+(** Some predefined colors. *)
+let red   = { r = 1.0; g = 0.0; b = 0.0 }
+let green = { r = 0.0; g = 1.0; b = 0.0 }
+let blue  = { r = 0.0; g = 0.0; b = 1.0 }
+let black = { r = 0.0; g = 0.0; b = 0.0 }
+let white = { r = 1.0; g = 1.0; b = 1.0 }
+              
+let gray p =
+  if p < 0.0 || p > 1.0 then
+    (Log.error "gray percentage must be in [0,1]";
+     exit 0)
+  else
+    { r = p; g = p; b = p }
+
+let to_int { r; g; b } =
+  let open Int32 in
+  let r = of_float (r *. 255.0) in
+  let g = of_float (g *. 255.0) in
+  let b = of_float (b *. 255.0) in
+  logor (logor (shift_left r 16) (shift_left g 8)) b
+      
+                  
 (** A path in color space where each color is weighted by a value in [0,1].
     As an example, [ (red, 0.0); (blue, 0.5); (red, 1.0) ] corresponds to
     a path that starts and finishes by red, going halfway through by blue.
@@ -62,34 +93,34 @@ let print { stroke; fill } =
   in
   Printf.sprintf "{ stroke = %s; fill = %s }" stroke_s fill_s
 
-(** Some predefined colors. *)
-let red   = { r = 1.0; g = 0.0; b = 0.0 }
-let green = { r = 0.0; g = 1.0; b = 0.0 }
-let blue  = { r = 0.0; g = 0.0; b = 1.0 }
-let black = { r = 0.0; g = 0.0; b = 0.0 }
-let white = { r = 1.0; g = 1.0; b = 1.0 }
+
               
-(** Make an rgb color. *)
-let rgb r g b = { r; g; b }
-  
 (** Make a style from a stroke and a fill. *)
 let make ~stroke ~fill = { stroke; fill }
 
 (** Some predefined stokes and fills. *)
-
 let solid_stroke ~clr = Solid { c = clr }
 
 let solid_fill ~clr = Solid { c = clr }
 
-let vertical_gradient ~clr1 ~clr2 =
+let vertical_gradient ~path =
+  let p0 = Pt.pt 0.0 0.0 in
+  let p1 = Pt.pt 0.0 1.0 in
+  Linear { p0; p1; stops = path }
+
+let horizontal_gradient ~path =
+  let p0 = Pt.pt 0.0 0.0 in
+  let p1 = Pt.pt 1.0 0.0 in
+  Linear { p0; p1; stops = path }
+                            
+let simple_vertical_gradient ~clr1 ~clr2 =
   let p0 = Pt.pt 0.0 0.0 in
   let p1 = Pt.pt 0.0 1.0 in
   let stops = [ (clr1, 0.0); (clr2, 1.0) ] in
   Linear { p0; p1; stops }
 
-let horizontal_gradient ~clr1 ~clr2 =
+let simple_horizontal_gradient ~clr1 ~clr2 =
   let p0 = Pt.pt 0.0 0.0 in
   let p1 = Pt.pt 1.0 0.0 in
   let stops = [ (clr1, 0.0); (clr2, 1.0) ] in
   Linear { p0; p1; stops }
-         
