@@ -59,132 +59,43 @@ module type CommandsSig =
       val of_commands : alias list -> t
     end
 
+    module Arrow :
+    sig
+      type style
+
+      val default_style : style
+      val mid_style     : style
+
+      val mkarrow       : style:style -> start:Pt.t -> finish:Pt.t -> t list
+      val mkarrow_curvy : style:style -> start:Pt.t -> finish:Pt.t -> angle:float -> t list
+      val mk_multisegment_arrow : style:style -> points:Pt.t list -> t list
+             
+    end
+
+    val circle  : center:Pt.t -> radius:float -> t
+    val box     : mins:Pt.t -> maxs:Pt.t -> t
+    val text    : pos:position -> size:float -> text:string -> t
+    val style   : style:Style.t -> subcommands:(t list) -> t
+    val segment : p1:Pt.t -> p2:Pt.t -> t
+    val bezier  : p1:Pt.t -> c1:Pt.t -> p2:Pt.t -> c2:Pt.t -> t
+    val ubezier : p1:Pt.t -> p2:Pt.t -> angle:float -> t
+    val image   : pos:Pt.t -> image:Image.t -> t
+    val declpt  : pt:Pt.t -> name:name -> t
+
+
+    type layout
+
+    val cmd  : name:(int option) -> t list -> layout
+    val hbox : deltax:float -> layout_list:(layout list) -> layout
+    val vbox : deltay:float -> layout_list:(layout list) -> layout
+
+    val arrow : start:name -> finish:name -> sty:Arrow.style -> layout -> layout
+    val smart_arrow : start:name -> finish:name -> sty:Arrow.style -> layout -> layout                                                                            
+    val emit_commands_with_bbox : layout -> t list * Bbox.t
+    val emit_commands : layout -> t list
+    val emit_commands_centered : float * float -> layout -> t list
   end
     
-(* module type CommandsSig = *)
-(*   sig *)
-
-(*     type name *)
-    
-(*     type 'a s = { tag : 'a; desc : desc; } *)
-(*      and desc = *)
-(*        | Circle of { center : Pt.t; radius : float } *)
-(*        | Box of Pt.t * Pt.t *)
-(*        | Text of Pt.t * float * string *)
-(*        | Color of float * float * float *)
-(*        | Segment of Pt.t * Pt.t *)
-(*        | Bezier of Pt.t * Pt.t * Pt.t * Pt.t *)
-(*        | Image of Pt.t * Image.t *)
-(*        | DeclPt of Pt.t * name *)
-
-(*     type t = int option s *)
-(*     type untagged = unit s *)
-
-(*     module Tagged : *)
-(*     sig *)
-(*       val mktag : 'a -> desc -> 'a s *)
-(*       val circle : tag:'a -> p:Pt.t -> radius:float -> 'a s *)
-(*       val box : tag:'a -> mins:Pt.t -> maxs:Pt.t -> 'a s *)
-(*       val text : tag:'a -> p:Pt.t -> sz:int -> s:string -> 'a s *)
-(*       val color : tag:'a -> r:float -> g:float -> b:float -> 'a s *)
-(*       val segment : tag:'a -> p1:Pt.t -> p2:Pt.t -> 'a s *)
-(*       val bezier : *)
-(*         tag:'a -> p1:Pt.t -> c1:Pt.t -> p2:Pt.t -> c2:Pt.t -> 'a s *)
-(*       val ubezier : tag:'a -> p1:Pt.t -> p2:Pt.t -> angle:float -> 'a s *)
-(*       val image : tag:'a -> p:Pt.t -> im:Image.t -> 'a s *)
-(*       val declpt : tag:'a -> p:Pt.t -> n:name -> 'a s *)
-(*     end *)
-
-(*     val mkunit : desc -> untagged *)
-(*     val circle : p:Pt.t -> radius:float -> untagged *)
-(*     val box : mins:Pt.t -> maxs:Pt.t -> untagged *)
-(*     val text : p:Pt.t -> sz:int -> s:string -> untagged *)
-(*     val color : r:float -> g:float -> b:float -> untagged *)
-(*     val segment : p1:Pt.t -> p2:Pt.t -> untagged *)
-(*     val bezier : p1:Pt.t -> c1:Pt.t -> p2:Pt.t -> c2:Pt.t -> untagged *)
-(*     val ubezier : p1:Pt.t -> p2:Pt.t -> angle:float -> untagged *)
-(*     val image : p:Pt.t -> im:Image.t -> untagged *)
-(*     val declpt : p:Pt.t -> n:name -> untagged *)
-(*     val mid : Pt.t -> Pt.t -> Pt.t *)
-(*     val bezier_midpoint : Pt.t -> Pt.t -> Pt.t -> Pt.t -> Pt.t *)
-(*     val anchor_of : 'a s -> Pt.t *)
-(*     val bouquet_of_segments : Pt.t -> Pt.t -> name list -> untagged list *)
-(*     val print_cmd : 'a s -> string *)
-    
-(*     module Bbox : *)
-(*     sig *)
-(*       type t = Bbox.t = { mins : Pt.t; maxs : Pt.t; } *)
-(*       val box : Pt.t -> Pt.t -> t *)
-(*       val empty : t *)
-(*       val center : t -> Pt.t *)
-(*       val width : t -> float *)
-(*       val height : t -> float *)
-(*       val join : t -> t -> t *)
-(*       val of_points : Pt.t list -> t *)
-(*       val se : t -> Pt.t *)
-(*       val sw : t -> Pt.t *)
-(*       val ne : t -> Pt.t *)
-(*       val nw : t -> Pt.t *)
-(*       val print : t -> string *)
-(*       val of_command : 'a s -> t *)
-(*       val of_commands : 'a s list -> t *)
-(*     end *)
-
-(*     val tag : 'a s list -> 'b -> 'b s list *)
-(*     val untag : 'a s list -> untagged list *)
-(*     val translate : 'a s list -> Pt.t -> 'a s list *)
-(*     val center_to_page : float * float -> 'a s list -> 'a s list *)
-(*     val crop : 'a s list -> 'a s list *)
-    
-(*     module Arrow : *)
-(*     sig *)
-(*       type style = { *)
-(*           startp : float; *)
-(*           endp : float; *)
-(*           arrowp : float; *)
-(*           legs : float; *)
-(*           angle : float; *)
-(*         } *)
-(*       type t = { *)
-(*           start : name; *)
-(*           finish : name; *)
-(*           style : style; *)
-(*           smart : bool; *)
-(*         } *)
-(*       val mkarrowhead : float -> float -> Pt.t * Pt.t *)
-(*       val mkarrow : style -> Pt.t -> Pt.t -> untagged list *)
-(*       val mkarrow_curvy : style -> Pt.t -> Pt.t -> float -> untagged list *)
-(*       val to_segments : 'a list -> ('a * 'a) list *)
-(*       val mk_multisegment_arrow : style -> Pt.t list -> untagged list *)
-(*       val default_style : style *)
-(*       val mid_style : style *)
-(*     end *)
-    
-(*     type layout *)
-    
-(*     val cmd : name:int option -> untagged list -> layout *)
-(*     val hbox : deltax:float -> layout_list:layout list -> layout *)
-(*     val vbox : deltay:float -> layout_list:layout list -> layout *)
-(*     val arrow : *)
-(*       start:name -> finish:name -> sty:Arrow.style -> layout -> layout *)
-(*     val smart_arrow : *)
-(*       start:name -> finish:name -> sty:Arrow.style -> layout -> layout *)
-    
-(*     val halign : *)
-(*       ('a s list * Bbox.t) list -> float -> ('a s list * Bbox.t) list *)
-(*     val valign : *)
-(*       ('a s list * Bbox.t) list -> float -> ('a s list * Bbox.t) list *)
-    
-(*     exception Emit_error *)
-
-(*     val emit_commands_with_bbox : layout -> t list * Bbox.t *)
-    
-(*     val emit_commands : layout -> t list *)
-    
-(*     val emit_commands_centered : float * float -> layout -> t list *)
-
-(*   end *)
-
 module Make(N : Name) =
   (struct
 
@@ -515,7 +426,7 @@ module Make(N : Name) =
           }
 
             
-        let mkarrowhead legs_length legs_angle =
+        let mkarrowhead ~legs_length ~legs_angle =
           let hangle = 0.5 *. legs_angle in
           let x = (cos hangle) *. legs_length in
           let y = (sin hangle) *. legs_length in
@@ -526,7 +437,7 @@ module Make(N : Name) =
             
 
         (* let mkarrow legs_length legs_angle start finish = *)
-        let mkarrow (style : style) start finish =
+        let mkarrow ~style ~start ~finish =
           let (left_leg, right_leg) = mkarrowhead style.legs style.angle in
           let vec                   = Pt.minus finish start in
           let vec_angle             = Pt.angle_of_vec (start, finish) in
@@ -542,7 +453,7 @@ module Make(N : Name) =
           ]
 
         (* let mkarrow legs_length legs_angle start finish = *)
-        let mkarrow_curvy style start finish angle =
+        let mkarrow_curvy ~style ~start ~finish ~angle =
           if not (List.mem style.arrowp [0.0; 0.5; 1.0]) then
             failwith "Commands.mkarrow_curvy: arrowp must be either 0, 0.5 or 1"
           else
@@ -578,7 +489,7 @@ module Make(N : Name) =
           | p1 :: p2 :: tl ->
              (p1, p2) :: (to_segments (p2 :: tl))
                            
-        let mk_multisegment_arrow style points =
+        let mk_multisegment_arrow ~style ~points =
           let segments = to_segments points in
           let segments =
             match segments with
@@ -825,5 +736,5 @@ module Make(N : Name) =
       center_to_page (w,h) cmds
                      
 
-  end (* : CommandsSig with type name = N.t *))
+  end : CommandsSig with type name = N.t)
     
