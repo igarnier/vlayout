@@ -82,6 +82,8 @@ module type CommandsSig =
     val image   : pos:Pt.t -> image:Image.t -> t
     val declpt  : pt:Pt.t -> name:name -> t
 
+    val crop : t list -> t list
+    val center_to_page : float*float -> t list -> t list
 
     type layout
 
@@ -90,7 +92,8 @@ module type CommandsSig =
     val vbox : deltay:float -> layout_list:(layout list) -> layout
 
     val arrow : start:name -> finish:name -> sty:Arrow.style -> layout -> layout
-    val smart_arrow : start:name -> finish:name -> sty:Arrow.style -> layout -> layout                                                                            
+    val smart_arrow : start:name -> finish:name -> sty:Arrow.style -> layout -> layout
+
     val emit_commands_with_bbox : layout -> t list * Bbox.t
     val emit_commands : layout -> t list
     val emit_commands_centered : float * float -> layout -> t list

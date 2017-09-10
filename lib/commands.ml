@@ -82,6 +82,8 @@ module type CommandsSig =
     val image   : pos:Pt.t -> image:Image.t -> t
     val declpt  : pt:Pt.t -> name:name -> t
 
+    val crop : t list -> t list
+    val center_to_page : float*float -> t list -> t list
 
     type layout
 
