@@ -42,7 +42,7 @@ module type CommandsSig =
 
     module Bbox :
     sig
-      type t = Bbox.t = { mins : Pt.t; maxs : Pt.t; }
+      type t = Bbox.t
       val box : Pt.t -> Pt.t -> t
       val empty : t
       val center : t -> Pt.t

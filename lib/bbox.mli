@@ -1,10 +1,7 @@
 (** Axis-aligned bounding boxes.  *)
 
 (** A bounding box ({i bb} for short) is a pair of points, mins being the lower left corner and maxs being the upper right corner. *)
-type t = {
-    mins : Pt.t;
-    maxs : Pt.t;
-  }
+type t = Gg.Box2.t
 
 (** box p1 p2 creates a bounding box wih p1 being the lower left corner and p2 being the uppr right corner. *)            
 val box : Pt.t -> Pt.t -> t

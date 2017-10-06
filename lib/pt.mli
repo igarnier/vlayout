@@ -1,6 +1,8 @@
-type t = { x : float; y : float; }
+type t = Gg.P2.t
 val zero : t
 val pt : float -> float -> t
+val x : t -> float
+val y : t -> float
 val plus : t -> t -> t
 val minus : t -> t -> t
 val scale : t -> float -> t

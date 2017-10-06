@@ -1,63 +1,71 @@
-type t = { x : float; y : float }
+open Gg
 
-let zero = { x = 0.0; y = 0.0 }
+type t = p2
+
+let zero = P2.o
            
-let pt x y = { x; y }
+let pt = P2.v
 
-let plus pt1 pt2  = pt (pt1.x +. pt2.x) (pt1.y +. pt2.y)
+let x = V2.x
 
-let minus pt1 pt2 = pt (pt1.x -. pt2.x) (pt1.y -. pt2.y)
+let y = V2.y
 
-let scale p s = pt (p.x *. s) (p.y *. s)
+let plus = V2.add
+
+let minus = V2.sub
+
+let scale p s = V2.smul s p
 
 let neg p = scale p (~-. 1.0)
 
-let norm { x; y } = sqrt (x *. x +. y *. y)
+let norm = V2.norm
 
-let barycenter p1 p2 = pt (0.5 *. (p1.x +. p2.x)) (0.5 *. (p1.y +. p2.y ))
+let barycenter p1 p2 = V2.mix p1 p2 0.5
 
-let dot p1 p2 = p1.x *. p2.x +. p1.y *. p2.y
+let dot = V2.dot
                            
-let normalize p =
-  let il = 1.0 /. (norm p) in
-  pt (p.x *. il) (p.y *. il)
+let normalize = V2.unit
 
-let print { x; y } = Printf.sprintf "(%f, %f)" x y
+let print v = Printf.sprintf "(%f, %f)" (V2.x v) (V2.y v)
                                        
 let angle_of_vec (p1, p2) =
   let n = normalize (minus p2 p1) in
-  if n.y < 0.0 then
-    ~-. (acos n.x)
+  if V2.y n < 0.0 then
+    ~-. (acos (V2.x n))
   else
-    acos n.x
+    acos (V2.x n)
          
-let rotate_vector angle { x; y } =
+let rotate_vector angle v =
+  let x = V2.x v
+  and y = V2.y v in
   let c = cos angle
   and s = sin angle in
-  {
-    x = x *. c -. y *. s;
-    y = x *. s +. y *. c
-  }
+  let x' = x *. c -. y *. s
+  and y' = x *. s +. y *. c in
+  V2.v x' y'
 
 let rotate_point_about center angle point =
   plus (rotate_vector angle (minus point center)) center
 
-let rotate_90_cw { x; y } = pt y (~-. x)
+let rotate_90_cw v =
+  let x = V2.x v and y = V2.y v in
+  pt y (~-. x)
 
-let rotate_90_ccw { x; y } = pt (~-. y) x
+let rotate_90_ccw v =
+  let x = V2.x v and y = V2.y v in
+  pt (~-. y) x
 
 let cross p1 p2 =
-  p1.x *. p2.y -. p1.y *. p2.x
+  (V2.x p1) *. (V2.y p2) -. (V2.y p1) *. (V2.x p2)
 
 let pmin p1 p2 =
-  pt (min p1.x p2.x) (min p1.y p2.y)
+  pt (min (V2.x p1) (V2.x p2)) (min (V2.y p1) (V2.y p2))
 
 let pmax p1 p2 =
-  pt (max p1.x p2.x) (max p1.y p2.y)
+  pt (max (V2.x p1) (V2.x p2)) (max (V2.y p1) (V2.y p2))
 
 let (+)        = plus
 let (-)        = minus
 let ( *| )     = scale
 let ( |* ) s p = scale p s
 let (~-) p     = scale p (-. 1.0)
-
