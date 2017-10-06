@@ -3,7 +3,7 @@ type t =
     mins : Pt.t;
     maxs : Pt.t
   }
-       
+
 let box p1 p2 = { mins = p1; maxs = p2 }
 
 let empty =
@@ -18,7 +18,7 @@ let center { mins; maxs } =
 let width { mins; maxs } = maxs.Pt.x -. mins.Pt.x
 
 let height { mins; maxs } = maxs.Pt.y -. mins.Pt.y
-                                        
+
 let join b1 b2 =
   {
     mins = Pt.pt (min b1.mins.Pt.x b2.mins.Pt.x) (min b1.mins.Pt.y b2.mins.Pt.y);
@@ -35,10 +35,20 @@ let of_points pt_list =
   let (mins, maxs) =
     List.fold_left
       (fun (mins, maxs) p ->
-       (Pt.pmin mins p, Pt.pmax maxs p)
+         (Pt.pmin mins p, Pt.pmax maxs p)
       ) (empty.mins, empty.maxs) pt_list
   in
   { mins; maxs }
+
+let of_points_arr pt_arr =
+  let (mins, maxs) =
+    Array.fold_left
+      (fun (mins, maxs) p ->
+         (Pt.pmin mins p, Pt.pmax maxs p)
+      ) (empty.mins, empty.maxs) pt_arr
+  in
+  { mins; maxs }
+
 
 let se { mins; maxs } =
   Pt.pt maxs.Pt.x mins.Pt.y

@@ -31,6 +31,10 @@ val translate : Pt.t -> t -> t
 of points l *)                               
 val of_points : Pt.t list -> t
 
+(** Same as [of_points], taking an array instead of a list *)                               
+val of_points_arr : Pt.t array -> t
+
+
 (** The corners of a box b = { mins; maxs } can be accessed through 
     the functions that follow, with the following convention:
     nw -- ne

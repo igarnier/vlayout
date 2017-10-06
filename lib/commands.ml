@@ -1,3 +1,5 @@
+open Batteries
+
 module type Name =
   sig
     type t
@@ -281,7 +283,7 @@ module Make(N : Name) =
 
     let text_position pos size text =
       let max_h = size in
-      let max_w = max_h *. (float (String.length text)) in
+      let max_w = (* max_h *. *) 5. *. (float (String.length text)) in
       base_of_positioned_box max_h max_w pos
 
     module Bbox =
@@ -319,7 +321,7 @@ module Make(N : Name) =
           | DeclPt { pt } -> box pt pt
 
         and of_commands cl =
-          let bboxes = List.map of_command cl in
+          let bboxes = List.rev_map of_command cl in
           List.fold_left join empty bboxes
 
       end
@@ -602,29 +604,31 @@ module Make(N : Name) =
         
     (* invariant: must preserve order of commands *)
     let halign l deltax =
-      let rec halign_aux l =
+      let rec halign_aux l acc =
         match l with
-        | [] | [_] -> l
+        | [] -> List.rev acc
+        | [elt] -> List.rev (elt :: acc)
         | (cmds1, box1) :: (cmds2, box2) :: l ->
            let v = align_right_centered_vector box1 box2 deltax in
            let commands = translate cmds2 v in
            let box2     = Bbox.of_commands commands in (* could just translate it *)
-           (cmds1, box1) :: (halign_aux ((commands, box2) :: l))
+           halign_aux ((commands, box2) :: l) ((cmds1, box1) :: acc)
       in
-      halign_aux l
+      halign_aux l []
 
     (* invariant: must preserve order of commands *)
     let valign l deltay =
-      let rec valign_aux l =
+      let rec valign_aux l acc =
         match l with
-        | [] | [_] -> l
+        | [] -> List.rev acc
+        | [elt] -> List.rev (elt :: acc)
         | (cmds1, box1) :: (cmds2, box2) :: l ->
            let v = align_bottom_centered_vector box1 box2 deltay in
            let commands = translate cmds2 v in
            let box2     = Bbox.of_commands commands in (* could just translate it *)
-           (cmds1, box1) :: (valign_aux ((commands, box2) :: l))
+           valign_aux ((commands, box2) :: l) ((cmds1, box1) :: acc)
       in
-      valign_aux l                            
+      valign_aux l []
 
     let rec depth =
       function

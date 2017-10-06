@@ -11,8 +11,11 @@ build: [
 depends: [
   "jbuilder"                {build & >= "1.0+beta8"}
   "cairo2"
+  "dolog"
+  "batteries"
 ]
 available: [ ocaml-version >= "4.04.1" ]
 descr: "
-Declarative interface to Cairo.
+Declarative interface to Cairo, in the spirit of the venerable mlpost.
+Depends on Dolog, cairo2, batteries and gg.
 "
