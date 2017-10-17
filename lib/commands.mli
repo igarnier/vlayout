@@ -84,6 +84,9 @@ module type CommandsSig =
 
     val crop : t list -> t list
     val center_to_page : float*float -> t list -> t list
+    val translate : t list -> Pt.t -> t list
+    val scale : t list -> Pt.t -> t list
+    val map_pt : t list -> (Pt.t -> Pt.t) -> t list
 
     type layout
 

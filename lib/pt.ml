@@ -14,6 +14,8 @@ let plus = V2.add
 
 let minus = V2.sub
 
+let mul = V2.mul
+
 let scale p s = V2.smul s p
 
 let neg p = scale p (~-. 1.0)

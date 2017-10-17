@@ -86,6 +86,9 @@ sig
 
   val crop : t list -> t list
   val center_to_page : float*float -> t list -> t list
+  val translate : t list -> Pt.t -> t list
+  val scale : t list -> Pt.t -> t list
+  val map_pt : t list -> (Pt.t -> Pt.t) -> t list
 
   type layout
 
@@ -358,6 +361,64 @@ module Make(N : Name) =
               Image { pos = Pt.plus pos v; image }
             | DeclPt { pt; name } ->
               DeclPt { pt = Pt.plus pt v; name }
+          in
+          { x with desc }
+        ) commands
+
+    let rec scale commands v =
+      List.map (fun x ->
+          let desc =
+            match x.desc with
+            | Circle { center; radius } ->
+              Circle { center = Pt.mul center v; radius }
+            | Box { mins; maxs } ->
+              Box { mins = Pt.mul mins v; maxs = Pt.mul maxs v }
+            | Text { pos; size; text } ->
+              Text { pos = { pos = Pt.mul pos.pos v; relpos = pos.relpos }; size; text }
+            | Segment { p1; p2 } ->
+              Segment { p1 = Pt.mul p1 v; p2 = Pt.mul p2 v }
+            | Bezier { p1; c1; p2; c2 } ->
+              Bezier { p1 = Pt.mul p1 v;
+                       c1 = Pt.mul c1 v;
+                       p2 = Pt.mul p2 v;
+                       c2 = Pt.mul c2 v }
+            | Style { style; subcommands } ->
+              Style { style;
+                      subcommands = scale subcommands v
+                    }
+            | Image { pos; image } ->
+              Image { pos = Pt.mul pos v; image }
+            | DeclPt { pt; name } ->
+              DeclPt { pt = Pt.mul pt v; name }
+          in
+          { x with desc }
+        ) commands
+
+    let rec map_pt commands f =
+      List.map (fun x ->
+          let desc =
+            match x.desc with
+            | Circle { center; radius } ->
+              Circle { center = f center; radius }
+            | Box { mins; maxs } ->
+              Box { mins = f mins; maxs = f maxs }
+            | Text { pos; size; text } ->
+              Text { pos = { pos = f pos.pos; relpos = pos.relpos }; size; text }
+            | Segment { p1; p2 } ->
+              Segment { p1 = f p1; p2 = f p2 }
+            | Bezier { p1; c1; p2; c2 } ->
+              Bezier { p1 = f p1;
+                       c1 = f c1;
+                       p2 = f p2;
+                       c2 = f c2 }
+            | Style { style; subcommands } ->
+              Style { style;
+                      subcommands = map_pt subcommands f
+                    }
+            | Image { pos; image } ->
+              Image { pos = f pos; image }
+            | DeclPt { pt; name } ->
+              DeclPt { pt = f pt; name }
           in
           { x with desc }
         ) commands

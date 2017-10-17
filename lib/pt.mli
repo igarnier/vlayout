@@ -5,6 +5,7 @@ val x : t -> float
 val y : t -> float
 val plus : t -> t -> t
 val minus : t -> t -> t
+val mul : t -> t -> t
 val scale : t -> float -> t
 val neg : t -> t
 val norm : t -> float
