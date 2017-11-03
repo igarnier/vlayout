@@ -1,3 +1,5 @@
+open Batteries
+
 module Cairo(C : Commands.CommandsSig) =
 struct
 
@@ -42,7 +44,7 @@ struct
     | None ->
       fill_opt
     | Some patt ->
-      match patt with
+      match patt with      
       | Style.Solid _ ->
         fill_opt
       | Style.Linear { p0; p1; stops } ->
@@ -116,6 +118,7 @@ struct
       let adjusted_fill = adjust_fill_to_bbox bbox style.Style.fill in 
       Cairo.save ctx;
       set_pattern ctx style.Style.stroke;
+      Option.may (Cairo.set_dash ctx) style.dash;
       List.iter (render ctx adjusted_fill) subcommands;
       Cairo.restore ctx
     | C.Segment { p1; p2 } ->

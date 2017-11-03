@@ -32,19 +32,32 @@ type pattern =
   | Linear of { p0 : Pt.t; p1 : Pt.t; stops : color_stops }
   | Radial of { c0 : Pt.t; r0 : float; c1 : Pt.t; r1 : float; stops : color_stops }
 
+type dash_pattern = float array
+
 (* A style describes the stroke and fill pattern that can be used
    to draw all commands. *)
 type t =
   {
     stroke : pattern;
+    dash   : dash_pattern option;
     fill   : pattern option
   }
 
-val make : stroke:pattern -> fill:(pattern option) -> t
+val make : stroke:pattern -> dash:(dash_pattern option) -> fill:(pattern option) -> t
 
 val solid_stroke : clr:color -> pattern
 
 val solid_fill : clr:color -> pattern
+
+val with_dash : style:t -> dash:dash_pattern -> t
+
+val dot_dash : dash_pattern
+
+val small_dash : dash_pattern
+
+val medium_dash : dash_pattern
+
+val large_dash : dash_pattern
 
 val vertical_gradient : path:color_stops -> pattern
 

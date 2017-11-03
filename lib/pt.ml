@@ -32,11 +32,11 @@ let print v = Printf.sprintf "(%f, %f)" (V2.x v) (V2.y v)
                                        
 let angle_of_vec (p1, p2) =
   let n = normalize (minus p2 p1) in
-  if V2.y n < 0.0 then
+  if V2.y n < 0.0 then 
     ~-. (acos (V2.x n))
   else
     acos (V2.x n)
-         
+
 let rotate_vector angle v =
   let x = V2.x v
   and y = V2.y v in
