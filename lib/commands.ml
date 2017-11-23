@@ -31,35 +31,26 @@ sig
   and desc =
     | Circle  of { center : Pt.t; radius : float }
     | Box     of { mins : Pt.t; maxs : Pt.t }
-    | Text    of { pos : position; size : float; text : string }
+    | Text    of { pos : position; width : float; height : float; text : string }
     | Style   of { style : Style.t; subcommands : t list }
     | Segment of { p1 : Pt.t; p2 : Pt.t }
     | Bezier  of { p1 : Pt.t; c1 : Pt.t; p2 : Pt.t; c2 : Pt.t }
     | Image   of { pos : Pt.t; image : Image.t }
     | DeclPt  of { pt : Pt.t; name : name }
+    | Rotate  of { radians : float; subcommands : t list }
+    | Translate of { v : Pt.t; subcommands : t list }
+    | Scale of { xs : float; ys : float; subcommands : t list }
 
   type alias = t
 
-  val text_position : position -> float -> string -> Pt.t
+  val text_position : position -> float -> float -> Pt.t
 
   module Bbox :
-  sig
-    type t = Bbox.t
-    val box : Pt.t -> Pt.t -> t
-    val empty : t
-    val center : t -> Pt.t
-    val width : t -> float
-    val height : t -> float
-    val join : t -> t -> t
-    val of_points : Pt.t list -> t
-    val se : t -> Pt.t
-    val sw : t -> Pt.t
-    val ne : t -> Pt.t
-    val nw : t -> Pt.t
-    val print : t -> string
-    val of_command :  alias -> t
-    val of_commands : alias list -> t
-  end
+    sig
+      include Bbox.S
+      val of_command :  alias -> t
+      val of_commands : alias list -> t
+    end
 
   module Arrow :
   sig
@@ -76,19 +67,22 @@ sig
 
   val circle  : center:Pt.t -> radius:float -> t
   val box     : mins:Pt.t -> maxs:Pt.t -> t
-  val text    : pos:position -> size:float -> text:string -> t
+  val text    : pos:position -> width:float -> height:float -> text:string -> t
   val style   : style:Style.t -> subcommands:(t list) -> t
   val segment : p1:Pt.t -> p2:Pt.t -> t
   val bezier  : p1:Pt.t -> c1:Pt.t -> p2:Pt.t -> c2:Pt.t -> t
   val ubezier : p1:Pt.t -> p2:Pt.t -> angle:float -> t
   val image   : pos:Pt.t -> image:Image.t -> t
   val declpt  : pt:Pt.t -> name:name -> t
+  val rotate    : radians:float -> subcommands:(t list) -> t
+  val translate : v:Pt.t -> subcommands:(t list) -> t
+  val scale     : xs:float -> ys:float -> subcommands:(t list) -> t
 
-  val crop : t list -> t list
+  (* val crop : t list -> t list *)
   val center_to_page : float*float -> t list -> t list
-  val translate : t list -> Pt.t -> t list
-  val scale : t list -> Pt.t -> t list
-  val map_pt : t list -> (Pt.t -> Pt.t) -> t list
+  (* val translate : t list -> Pt.t -> t list *)
+  (* val scale : t list -> Pt.t -> t list *)
+  (* val map_pt : t list -> (Pt.t -> Pt.t) -> t list *)
 
   type layout
 
@@ -97,10 +91,10 @@ sig
   val vbox : deltay:float -> layout_list:(layout list) -> layout
 
   val arrow : start:name -> finish:name -> sty:Arrow.style -> layout -> layout
-  val smart_arrow : start:name -> finish:name -> sty:Arrow.style -> layout -> layout                                                                            
+  val smart_arrow : start:name -> finish:name -> sty:Arrow.style -> layout -> layout                                  
   val emit_commands_with_bbox : layout -> t list * Bbox.t
   val emit_commands : layout -> t list
-  val emit_commands_centered : float * float -> layout -> t list
+  (* val emit_commands_centered : float * float -> layout -> t list *)
 end
 
 module Make(N : Name) =
@@ -140,12 +134,15 @@ module Make(N : Name) =
     and desc =
       | Circle  of { center : Pt.t; radius : float }
       | Box     of { mins : Pt.t; maxs : Pt.t }
-      | Text    of { pos : position; size : float; text : string }
+      | Text    of { pos : position; width : float; height : float; text : string }
       | Style   of { style : Style.t; subcommands : t list }
       | Segment of { p1 : Pt.t; p2 : Pt.t }
       | Bezier  of { p1 : Pt.t; c1 : Pt.t; p2 : Pt.t; c2 : Pt.t }
       | Image   of { pos : Pt.t; image : Image.t }
       | DeclPt  of { pt : Pt.t; name : name }
+      | Rotate  of { radians : float; subcommands : t list }
+      | Translate of { v : Pt.t; subcommands : t list }
+      | Scale of { xs : float; ys : float; subcommands : t list }
 
     type alias = t
 
@@ -170,8 +167,8 @@ module Make(N : Name) =
     let box ~mins ~maxs =
       mktag None (Box { mins; maxs })
 
-    let text ~pos ~size ~text =
-      mktag None (Text { pos; size; text })
+    let text ~pos ~width ~height ~text =
+      mktag None (Text { pos; width; height; text })
 
     let style ~style ~subcommands =
       mktag None (Style { style; subcommands })
@@ -195,6 +192,16 @@ module Make(N : Name) =
     let declpt ~pt ~name =
       mktag None (DeclPt { pt; name })
 
+    let rotate ~radians ~subcommands =
+      mktag None (Rotate { radians; subcommands })
+
+    let translate ~v ~subcommands =
+      mktag None (Translate { v; subcommands })
+
+    let scale ~xs ~ys ~subcommands =
+      mktag None (Scale { xs; ys; subcommands })
+
+
     (* Each basic command (type t) is associated to a designated point we call the "anchor"  *)
     let mid a b =
       Pt.barycenter a b
@@ -212,13 +219,15 @@ module Make(N : Name) =
       match c.desc with
       | Circle { center }  -> center
       | Box { mins; maxs } -> mid mins maxs
-      | Text { pos }       -> point_of_position pos
+      | Text { pos } -> point_of_position pos
       | Segment { p1; p2 } -> mid p1 p2
       | Bezier { p1; c1; p2; c2 } ->
         bezier_midpoint p1 c1 p2 c2
       | Image { pos }      ->  pos
       | DeclPt _ | Style _ ->
         failwith "Commands.anchor_of: DeclPt and Style have no anchor"
+      | Rotate _ | Translate _ | Scale _ ->
+        failwith "Commands.anchor_of: unable to compute anchor for linear transformations"
 
     let bouquet_of_segments start finish names =
       match names with
@@ -238,17 +247,18 @@ module Make(N : Name) =
              (declpt (anchor_of edge) name) :: edge :: acc
           ) [] l
 
-    let print_cmd c =
+    let rec print_cmd c =
       Printf.(
         match c.desc with
         | Circle { center; radius } ->
           sprintf "Circle(%s, %f)" (Pt.print center) radius
         | Box { mins; maxs } ->
           sprintf "Box(%s, %s)" (Pt.print mins) (Pt.print maxs)
-        | Text { pos; size; text } ->
-          sprintf "Text(%s, %f, %s)" (print_position pos) size text
-        | Style { style } ->
-          sprintf "Style(%s)" (Style.print style)
+        | Text { pos; width; height; text } ->
+          sprintf "Text(%s, %f, %f, %s)" (print_position pos) width height text
+        | Style { style; subcommands } ->
+          let s    = Tools.to_sseq print_cmd "; " subcommands in          
+          sprintf "Style(%s, %s)" (Style.print style) s
         | Segment { p1; p2 } ->
           sprintf "Segment(%s, %s)" (Pt.print p1) (Pt.print p2)
         | Bezier { p1; c1; p2; c2 } ->
@@ -260,6 +270,15 @@ module Make(N : Name) =
             (Pt.print pos) (Image.xsize image) (Image.ysize image)
         | DeclPt { pt; name } ->
           sprintf "DeclPt(%s, %s)" (Pt.print pt) (N.print name)
+        | Rotate { radians; subcommands } ->
+          let s    = Tools.to_sseq print_cmd "; " subcommands in
+          sprintf "Rotate(%f, %s)" radians s
+        | Translate { v; subcommands } ->
+          let s    = Tools.to_sseq print_cmd "; " subcommands in
+          sprintf "Translate(%s, %s)" (Pt.print v) s
+        | Scale { xs; ys; subcommands } ->
+          let s    = Tools.to_sseq print_cmd "; " subcommands in
+          sprintf "Scale(%f, %f, %s)" xs ys s
       )         
 
     module NameMap = Map.Make(N)
@@ -284,17 +303,15 @@ module Make(N : Name) =
       (* x = base_x + w, y = base_y + h*)
       | NorthEast -> Pt.pt (x -. w) (y -. h)
 
-    let text_position pos size text =
-      let max_h = size in
-      let max_w = (* max_h *. *) 5. *. (float (String.length text)) in
-      base_of_positioned_box max_h max_w pos
+    let text_position pos width height =
+      (* let max_h = size in *)
+      (* let max_w = (\* max_h *. *\) 5. *. (float (String.length text)) in (\* TODO: this is the ugliest hack *\) *)
+      base_of_positioned_box height width pos
 
     module Bbox =
     struct
 
       include Bbox
-
-      open Pt
 
       let rec of_command c =
         match c.desc with
@@ -303,17 +320,17 @@ module Make(N : Name) =
           box (Pt.pt (x -. radius) (y -. radius)) (Pt.pt (x +. radius) (y +. radius))
         | Box { mins; maxs } ->
           box mins maxs
-        | Text { pos; size; text } ->
-          let max_h = size in
-          let max_w = max_h *. (float (String.length text)) in
-          let base  = text_position pos size text in
-          box base (plus base (pt max_w max_h))
+        | Text { pos; width; height; text } ->          
+          (* let max_h = size in *)
+          (* let max_w = max_h *. (float (String.length text)) in *)
+          let base  = text_position pos width height in
+          box base Pt.(base + (pt width height))
         | Segment { p1; p2 } ->
           let x1 = Pt.x p1 and y1 = Pt.y p1 in
           let x2 = Pt.x p2 and y2 = Pt.y p2 in
           box
-            (pt (min x1 x2) (min y1 y2))
-            (pt (max x1 x2) (max y1 y2))
+            (Pt.pt (min x1 x2) (min y1 y2))
+            (Pt.pt (max x1 x2) (max y1 y2))
         | Bezier { p1; c1; p2; c2 } ->
           join (box p1 c1) (box p2 c2)
         | Image { pos; image } ->
@@ -321,6 +338,15 @@ module Make(N : Name) =
         | Style { subcommands } ->
           of_commands subcommands
         | DeclPt { pt } -> box pt pt
+        | Rotate { radians; subcommands } ->
+          let bbox = of_commands subcommands in
+          rotate radians bbox
+        | Translate { v; subcommands } ->
+          let bbox = of_commands subcommands in
+          translate v bbox
+        | Scale { xs; ys; subcommands } ->
+          let bbox = of_commands subcommands in
+          scale xs ys bbox
 
       and of_commands cl =
         let bboxes = List.rev_map of_command cl in
@@ -336,92 +362,92 @@ module Make(N : Name) =
     (*   List.map (fun c -> { c with tag = None }) commands *)
 
     (* invariant: preserve order of commands *)
-    let rec translate commands v =
-      List.map (fun x ->
-          let desc =
-            match x.desc with
-            | Circle { center; radius } ->
-              Circle { center = Pt.plus center v; radius }
-            | Box { mins; maxs } ->
-              Box { mins = Pt.plus mins v; maxs = Pt.plus maxs v }
-            | Text { pos; size; text } ->
-              Text { pos = { pos = Pt.plus pos.pos v; relpos = pos.relpos }; size; text }
-            | Segment { p1; p2 } ->
-              Segment { p1 = Pt.plus p1 v; p2 = Pt.plus p2 v }
-            | Bezier { p1; c1; p2; c2 } ->
-              Bezier { p1 = Pt.plus p1 v;
-                       c1 = Pt.plus c1 v;
-                       p2 = Pt.plus p2 v;
-                       c2 = Pt.plus c2 v }
-            | Style { style; subcommands } ->
-              Style { style;
-                      subcommands = translate subcommands v
-                    }
-            | Image { pos; image } ->
-              Image { pos = Pt.plus pos v; image }
-            | DeclPt { pt; name } ->
-              DeclPt { pt = Pt.plus pt v; name }
-          in
-          { x with desc }
-        ) commands
+    (* let rec translate commands v = *)
+    (*   List.map (fun x -> *)
+    (*       let desc = *)
+    (*         match x.desc with *)
+    (*         | Circle { center; radius } -> *)
+    (*           Circle { center = Pt.plus center v; radius } *)
+    (*         | Box { mins; maxs } -> *)
+    (*           Box { mins = Pt.plus mins v; maxs = Pt.plus maxs v } *)
+    (*         | Text { pos; size; text } -> *)
+    (*           Text { pos = { pos = Pt.plus pos.pos v; relpos = pos.relpos }; size; text } *)
+    (*         | Segment { p1; p2 } -> *)
+    (*           Segment { p1 = Pt.plus p1 v; p2 = Pt.plus p2 v } *)
+    (*         | Bezier { p1; c1; p2; c2 } -> *)
+    (*           Bezier { p1 = Pt.plus p1 v; *)
+    (*                    c1 = Pt.plus c1 v; *)
+    (*                    p2 = Pt.plus p2 v; *)
+    (*                    c2 = Pt.plus c2 v } *)
+    (*         | Style { style; subcommands } -> *)
+    (*           Style { style; *)
+    (*                   subcommands = translate subcommands v *)
+    (*                 } *)
+    (*         | Image { pos; image } -> *)
+    (*           Image { pos = Pt.plus pos v; image } *)
+    (*         | DeclPt { pt; name } -> *)
+    (*           DeclPt { pt = Pt.plus pt v; name } *)
+    (*       in *)
+    (*       { x with desc } *)
+    (*     ) commands *)
 
-    let rec scale commands v =
-      List.map (fun x ->
-          let desc =
-            match x.desc with
-            | Circle { center; radius } ->
-              Circle { center = Pt.mul center v; radius }
-            | Box { mins; maxs } ->
-              Box { mins = Pt.mul mins v; maxs = Pt.mul maxs v }
-            | Text { pos; size; text } ->
-              Text { pos = { pos = Pt.mul pos.pos v; relpos = pos.relpos }; size; text }
-            | Segment { p1; p2 } ->
-              Segment { p1 = Pt.mul p1 v; p2 = Pt.mul p2 v }
-            | Bezier { p1; c1; p2; c2 } ->
-              Bezier { p1 = Pt.mul p1 v;
-                       c1 = Pt.mul c1 v;
-                       p2 = Pt.mul p2 v;
-                       c2 = Pt.mul c2 v }
-            | Style { style; subcommands } ->
-              Style { style;
-                      subcommands = scale subcommands v
-                    }
-            | Image { pos; image } ->
-              Image { pos = Pt.mul pos v; image }
-            | DeclPt { pt; name } ->
-              DeclPt { pt = Pt.mul pt v; name }
-          in
-          { x with desc }
-        ) commands
+    (* let rec scale commands v = *)
+    (*   List.map (fun x -> *)
+    (*       let desc = *)
+    (*         match x.desc with *)
+    (*         | Circle { center; radius } -> *)
+    (*           Circle { center = Pt.mul center v; radius } *)
+    (*         | Box { mins; maxs } -> *)
+    (*           Box { mins = Pt.mul mins v; maxs = Pt.mul maxs v } *)
+    (*         | Text { pos; size; text } -> *)
+    (*           Text { pos = { pos = Pt.mul pos.pos v; relpos = pos.relpos }; size; text } *)
+    (*         | Segment { p1; p2 } -> *)
+    (*           Segment { p1 = Pt.mul p1 v; p2 = Pt.mul p2 v } *)
+    (*         | Bezier { p1; c1; p2; c2 } -> *)
+    (*           Bezier { p1 = Pt.mul p1 v; *)
+    (*                    c1 = Pt.mul c1 v; *)
+    (*                    p2 = Pt.mul p2 v; *)
+    (*                    c2 = Pt.mul c2 v } *)
+    (*         | Style { style; subcommands } -> *)
+    (*           Style { style; *)
+    (*                   subcommands = scale subcommands v *)
+    (*                 } *)
+    (*         | Image { pos; image } -> *)
+    (*           Image { pos = Pt.mul pos v; image } *)
+    (*         | DeclPt { pt; name } -> *)
+    (*           DeclPt { pt = Pt.mul pt v; name } *)
+    (*       in *)
+    (*       { x with desc } *)
+    (*     ) commands *)
 
-    let rec map_pt commands f =
-      List.map (fun x ->
-          let desc =
-            match x.desc with
-            | Circle { center; radius } ->
-              Circle { center = f center; radius }
-            | Box { mins; maxs } ->
-              Box { mins = f mins; maxs = f maxs }
-            | Text { pos; size; text } ->
-              Text { pos = { pos = f pos.pos; relpos = pos.relpos }; size; text }
-            | Segment { p1; p2 } ->
-              Segment { p1 = f p1; p2 = f p2 }
-            | Bezier { p1; c1; p2; c2 } ->
-              Bezier { p1 = f p1;
-                       c1 = f c1;
-                       p2 = f p2;
-                       c2 = f c2 }
-            | Style { style; subcommands } ->
-              Style { style;
-                      subcommands = map_pt subcommands f
-                    }
-            | Image { pos; image } ->
-              Image { pos = f pos; image }
-            | DeclPt { pt; name } ->
-              DeclPt { pt = f pt; name }
-          in
-          { x with desc }
-        ) commands
+    (* let rec map_pt commands f = *)
+    (*   List.map (fun x -> *)
+    (*       let desc = *)
+    (*         match x.desc with *)
+    (*         | Circle { center; radius } -> *)
+    (*           Circle { center = f center; radius } *)
+    (*         | Box { mins; maxs } -> *)
+    (*           Box { mins = f mins; maxs = f maxs } *)
+    (*         | Text { pos; size; text } -> *)
+    (*           Text { pos = { pos = f pos.pos; relpos = pos.relpos }; size; text } *)
+    (*         | Segment { p1; p2 } -> *)
+    (*           Segment { p1 = f p1; p2 = f p2 } *)
+    (*         | Bezier { p1; c1; p2; c2 } -> *)
+    (*           Bezier { p1 = f p1; *)
+    (*                    c1 = f c1; *)
+    (*                    p2 = f p2; *)
+    (*                    c2 = f c2 } *)
+    (*         | Style { style; subcommands } -> *)
+    (*           Style { style; *)
+    (*                   subcommands = map_pt subcommands f *)
+    (*                 } *)
+    (*         | Image { pos; image } -> *)
+    (*           Image { pos = f pos; image } *)
+    (*         | DeclPt { pt; name } -> *)
+    (*           DeclPt { pt = f pt; name } *)
+    (*       in *)
+    (*       { x with desc } *)
+    (*     ) commands *)
 
     let center_to_page (w, h) (commands : t list) =
       let b      = Bbox.of_commands commands in
@@ -429,12 +455,12 @@ module Make(N : Name) =
       let boxh   = Bbox.height b in
       let deltah = 0.5 *. (h -. boxh) in
       let deltaw = 0.5 *. (w -. boxw) in
-      translate commands (Pt.plus (Pt.scale (Bbox.sw b) (~-. 1.0)) (Pt.pt deltaw deltah))
+      [translate ~v:(Pt.plus (Pt.scale (Bbox.sw b) (~-. 1.0)) (Pt.pt deltaw deltah)) ~subcommands:commands]
 
     (* invariant: preserve order of commands *)
     let crop (commands : t list) =
       let b = Bbox.of_commands commands in
-      translate commands (Pt.scale (Bbox.sw b) (~-. 1.0))
+      translate ~v:(Pt.scale (Bbox.sw b) (~-. 1.0)) ~subcommands:commands
 
     (* let rec point_map_of_commands cmds = *)
     (*   match cmds with *)
@@ -451,7 +477,7 @@ module Make(N : Name) =
     (*          (n, p) :: (point_map_of_commands l) *)
     (*      ) *)
 
-    let point_map_of_commands cmds =
+    let rec point_map_of_commands cmds acc =
       List.fold_left
         (fun acc c ->
            match c.desc with
@@ -460,11 +486,18 @@ module Make(N : Name) =
            | Text _
            | Segment _
            | Bezier _
-           | Style _
            | Image _ -> acc
+           | Style { subcommands }
+           | Rotate { subcommands }
+           | Translate { subcommands } 
+           | Scale { subcommands } ->
+             point_map_of_commands subcommands acc
            | DeclPt { pt; name } ->
              NameMap.add name (pt, c.tag) acc
-        ) NameMap.empty cmds           
+        ) acc cmds           
+
+    let point_map_of_commands cmds =
+      point_map_of_commands cmds NameMap.empty
 
     (* Arrows *)
     module Arrow =
@@ -644,8 +677,6 @@ module Make(N : Name) =
 
     (* Layout algorithm *)
 
-
-
     (* given box1, compute displacement vector for box2 to 
      * be aligned the right of box1, in a centered way. *)
     let align_right_centered_vector box1 box2 deltax =
@@ -670,8 +701,8 @@ module Make(N : Name) =
         | [elt] -> List.rev (elt :: acc)
         | (cmds1, box1) :: (cmds2, box2) :: l ->
           let v = align_right_centered_vector box1 box2 deltax in
-          let commands = translate cmds2 v in
-          let box2     = Bbox.of_commands commands in (* could just translate it *)
+          let commands = [translate ~v ~subcommands:cmds2] in
+          let box2     = Bbox.translate v box2 in
           halign_aux ((commands, box2) :: l) ((cmds1, box1) :: acc)
       in
       halign_aux l []
@@ -684,8 +715,8 @@ module Make(N : Name) =
         | [elt] -> List.rev (elt :: acc)
         | (cmds1, box1) :: (cmds2, box2) :: l ->
           let v = align_bottom_centered_vector box1 box2 deltay in
-          let commands = translate cmds2 v in
-          let box2     = Bbox.of_commands commands in (* could just translate it *)
+          let commands = [translate ~v ~subcommands:cmds2] in
+          let box2     = Bbox.translate v box2 in
           valign_aux ((commands, box2) :: l) ((cmds1, box1) :: acc)
       in
       valign_aux l []
@@ -729,7 +760,7 @@ module Make(N : Name) =
     let rec emit_commands_with_bbox (l : layout) : ((t list) * Bbox.t) =
       match l with
       | Cmd named_command ->
-        let cmds = crop named_command.cmd in
+        let cmds = [crop named_command.cmd] in
         let named_cmds = tag cmds named_command.cmd_name in
         (named_cmds, Bbox.of_commands cmds)
       | Hbox(deltax, ls) ->
@@ -795,11 +826,11 @@ module Make(N : Name) =
 
     let emit_commands l =
       let (cmds, bbox) = emit_commands_with_bbox l in
-      crop cmds
+      [crop cmds]
 
-    let emit_commands_centered (w,h) l =
-      let (cmds, bbox) = emit_commands_with_bbox l in
-      center_to_page (w,h) cmds
+    (* let emit_commands_centered (w,h) l = *)
+    (*   let (cmds, bbox) = emit_commands_with_bbox l in *)
+    (*   center_to_page (w,h) cmds *)
 
 
   end : CommandsSig with type name = N.t)

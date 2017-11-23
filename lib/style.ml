@@ -45,8 +45,7 @@ let to_int { r; g; b } =
  *)               
 type color_stops = (color * float) list
 
-(** A [pattern] describes how to paint a (potentially 1d) surface.
- *)                                   
+(** A [pattern] describes how to paint a (potentially 1d) surface. *)                                   
 type pattern =
   | Solid of  { c : color }
   | Linear of { p0 : Pt.t; p1 : Pt.t; stops : color_stops }
@@ -56,13 +55,16 @@ type pattern =
 type dash_pattern = float array
 
 (** A style describes how to paint a surface enclosed by a path.
-    The [stroke] field describes the enclosing path and is mandatory,
+    The [stroke] field describes the enclosing path and is mandatory.
+    [width] and [dash] optionally describe the width and the dash pattern
+    of the stroke,
     while the optional [fill] field describes how the enclosed surface
     must be drawn.
- *)                
+ *)
 type t =
   {
     stroke : pattern;
+    width  : float option;
     dash   : dash_pattern option;
     fill   : pattern option
   }
@@ -114,14 +116,14 @@ let print { stroke; dash; fill } =
 
               
 (** Make a style from a stroke and a fill. *)
-let make ~stroke ~dash ~fill = { stroke; dash; fill }
+let make ~stroke ~width ~dash ~fill = { stroke; width; dash; fill }
 
 (** Some predefined stokes and fills. *)
 let solid_stroke ~clr = Solid { c = clr }
 
 let solid_fill ~clr = Solid { c = clr }
 
-let with_dash ~style:{ stroke; fill } ~dash = { stroke; fill; dash = Some dash}
+let with_dash ~style ~dash = { style with dash = Some dash }
 
 let dot_dash = [| 1.0; 5.0 |]
 

@@ -34,16 +34,22 @@ type pattern =
 
 type dash_pattern = float array
 
-(* A style describes the stroke and fill pattern that can be used
-   to draw all commands. *)
+(** A style describes how to paint a surface enclosed by a path.
+    The [stroke] field describes the enclosing path and is mandatory.
+    [width] and [dash] optionally describe the width and the dash pattern
+    of the stroke,
+    while the optional [fill] field describes how the enclosed surface
+    must be drawn.
+ *)
 type t =
   {
     stroke : pattern;
+    width  : float option;
     dash   : dash_pattern option;
     fill   : pattern option
   }
 
-val make : stroke:pattern -> dash:(dash_pattern option) -> fill:(pattern option) -> t
+val make : stroke:pattern -> width:(float option) -> dash:(dash_pattern option) -> fill:(pattern option) -> t
 
 val solid_stroke : clr:color -> pattern
 
