@@ -54,7 +54,14 @@ sig
 
   module Arrow :
   sig
-    type style
+    type style =
+      {
+        startp : float; (* [0,1] *)
+        endp   : float; (* [0,1] *)
+        arrowp : float; (* [0,1] *)
+        legs   : float; (* legs length, >= 0 *)
+        angle  : float  (* legs angle *)
+      }
 
     val default_style : style
     val mid_style     : style
@@ -84,17 +91,30 @@ sig
   (* val scale : t list -> Pt.t -> t list *)
   (* val map_pt : t list -> (Pt.t -> Pt.t) -> t list *)
 
+  type hposition = 
+    [ `Hcentered
+    | `Bottom
+    | `Top
+    ]
+
+  type vposition = 
+    [ `Vcentered
+    | `Left
+    | `Right
+    ]
+
   type layout
 
   val cmd  : name:(int option) -> t list -> layout
-  val hbox : deltax:float -> layout_list:(layout list) -> layout
-  val vbox : deltay:float -> layout_list:(layout list) -> layout
+  val hbox : ?pos:hposition -> ?deltax:float -> layout list -> layout
+  val vbox : ?pos:vposition -> ?deltay:float -> layout list -> layout
 
   val arrow : start:name -> finish:name -> sty:Arrow.style -> layout -> layout
-  val smart_arrow : start:name -> finish:name -> sty:Arrow.style -> layout -> layout                                  
+  (* val smart_arrow : start:name -> finish:name -> sty:Arrow.style -> layout -> layout                                   *)
   val emit_commands_with_bbox : layout -> t list * Bbox.t
   val emit_commands : layout -> t list
   (* val emit_commands_centered : float * float -> layout -> t list *)
+
 end
 
 module Make(N : Name) =
@@ -358,96 +378,6 @@ module Make(N : Name) =
     let tag (commands : t list) (tag : int option) : t list =
       List.map (fun c -> { c with tag }) commands
 
-    (* let untag (commands : t list) : t list = *)
-    (*   List.map (fun c -> { c with tag = None }) commands *)
-
-    (* invariant: preserve order of commands *)
-    (* let rec translate commands v = *)
-    (*   List.map (fun x -> *)
-    (*       let desc = *)
-    (*         match x.desc with *)
-    (*         | Circle { center; radius } -> *)
-    (*           Circle { center = Pt.plus center v; radius } *)
-    (*         | Box { mins; maxs } -> *)
-    (*           Box { mins = Pt.plus mins v; maxs = Pt.plus maxs v } *)
-    (*         | Text { pos; size; text } -> *)
-    (*           Text { pos = { pos = Pt.plus pos.pos v; relpos = pos.relpos }; size; text } *)
-    (*         | Segment { p1; p2 } -> *)
-    (*           Segment { p1 = Pt.plus p1 v; p2 = Pt.plus p2 v } *)
-    (*         | Bezier { p1; c1; p2; c2 } -> *)
-    (*           Bezier { p1 = Pt.plus p1 v; *)
-    (*                    c1 = Pt.plus c1 v; *)
-    (*                    p2 = Pt.plus p2 v; *)
-    (*                    c2 = Pt.plus c2 v } *)
-    (*         | Style { style; subcommands } -> *)
-    (*           Style { style; *)
-    (*                   subcommands = translate subcommands v *)
-    (*                 } *)
-    (*         | Image { pos; image } -> *)
-    (*           Image { pos = Pt.plus pos v; image } *)
-    (*         | DeclPt { pt; name } -> *)
-    (*           DeclPt { pt = Pt.plus pt v; name } *)
-    (*       in *)
-    (*       { x with desc } *)
-    (*     ) commands *)
-
-    (* let rec scale commands v = *)
-    (*   List.map (fun x -> *)
-    (*       let desc = *)
-    (*         match x.desc with *)
-    (*         | Circle { center; radius } -> *)
-    (*           Circle { center = Pt.mul center v; radius } *)
-    (*         | Box { mins; maxs } -> *)
-    (*           Box { mins = Pt.mul mins v; maxs = Pt.mul maxs v } *)
-    (*         | Text { pos; size; text } -> *)
-    (*           Text { pos = { pos = Pt.mul pos.pos v; relpos = pos.relpos }; size; text } *)
-    (*         | Segment { p1; p2 } -> *)
-    (*           Segment { p1 = Pt.mul p1 v; p2 = Pt.mul p2 v } *)
-    (*         | Bezier { p1; c1; p2; c2 } -> *)
-    (*           Bezier { p1 = Pt.mul p1 v; *)
-    (*                    c1 = Pt.mul c1 v; *)
-    (*                    p2 = Pt.mul p2 v; *)
-    (*                    c2 = Pt.mul c2 v } *)
-    (*         | Style { style; subcommands } -> *)
-    (*           Style { style; *)
-    (*                   subcommands = scale subcommands v *)
-    (*                 } *)
-    (*         | Image { pos; image } -> *)
-    (*           Image { pos = Pt.mul pos v; image } *)
-    (*         | DeclPt { pt; name } -> *)
-    (*           DeclPt { pt = Pt.mul pt v; name } *)
-    (*       in *)
-    (*       { x with desc } *)
-    (*     ) commands *)
-
-    (* let rec map_pt commands f = *)
-    (*   List.map (fun x -> *)
-    (*       let desc = *)
-    (*         match x.desc with *)
-    (*         | Circle { center; radius } -> *)
-    (*           Circle { center = f center; radius } *)
-    (*         | Box { mins; maxs } -> *)
-    (*           Box { mins = f mins; maxs = f maxs } *)
-    (*         | Text { pos; size; text } -> *)
-    (*           Text { pos = { pos = f pos.pos; relpos = pos.relpos }; size; text } *)
-    (*         | Segment { p1; p2 } -> *)
-    (*           Segment { p1 = f p1; p2 = f p2 } *)
-    (*         | Bezier { p1; c1; p2; c2 } -> *)
-    (*           Bezier { p1 = f p1; *)
-    (*                    c1 = f c1; *)
-    (*                    p2 = f p2; *)
-    (*                    c2 = f c2 } *)
-    (*         | Style { style; subcommands } -> *)
-    (*           Style { style; *)
-    (*                   subcommands = map_pt subcommands f *)
-    (*                 } *)
-    (*         | Image { pos; image } -> *)
-    (*           Image { pos = f pos; image } *)
-    (*         | DeclPt { pt; name } -> *)
-    (*           DeclPt { pt = f pt; name } *)
-    (*       in *)
-    (*       { x with desc } *)
-    (*     ) commands *)
 
     let center_to_page (w, h) (commands : t list) =
       let b      = Bbox.of_commands commands in
@@ -461,21 +391,6 @@ module Make(N : Name) =
     let crop (commands : t list) =
       let b = Bbox.of_commands commands in
       translate ~v:(Pt.scale (Bbox.sw b) (~-. 1.0)) ~subcommands:commands
-
-    (* let rec point_map_of_commands cmds = *)
-    (*   match cmds with *)
-    (*   | [] -> [] *)
-    (*   | c :: l -> *)
-    (*      (match c.desc with *)
-    (*       | Circle(_,_) *)
-    (*       | Box(_, _) *)
-    (*       | Text(_, _, _) *)
-    (*       | Segment(_, _) *)
-    (*       | Bezier(_, _, _, _) *)
-    (*       | Color(_, _,_ ) -> point_map_of_commands l *)
-    (*       | DeclPt(p, n) -> *)
-    (*          (n, p) :: (point_map_of_commands l) *)
-    (*      ) *)
 
     let rec point_map_of_commands cmds acc =
       List.fold_left
@@ -494,10 +409,44 @@ module Make(N : Name) =
              point_map_of_commands subcommands acc
            | DeclPt { pt; name } ->
              NameMap.add name (pt, c.tag) acc
-        ) acc cmds           
+        ) acc cmds
 
     let point_map_of_commands cmds =
       point_map_of_commands cmds NameMap.empty
+
+
+    let collect_declared_points cmds =
+      let rec traverse cmd mat map =
+        match cmd.desc with
+        | Circle _
+        | Box _
+        | Text _
+        | Style _
+        | Segment _
+        | Bezier _
+        | Image _ -> map
+        | DeclPt { pt; name } ->
+          let global_pt = Gg.P2.tr mat pt in
+          NameMap.add name global_pt map
+        | Rotate { radians; subcommands } ->
+          let rot = Gg.M3.rot2 radians in
+          let mat = Gg.M3.mul mat rot in
+          traverse_list subcommands mat map
+        | Translate { v; subcommands } ->
+          let tra = Gg.M3.move2 v in
+          let mat = Gg.M3.mul mat tra in
+          traverse_list subcommands mat map
+        | Scale { xs; ys; subcommands } ->
+          let sca = Gg.M3.scale2 (Pt.pt xs ys) in
+          let mat = Gg.M3.mul mat sca in
+          traverse_list subcommands mat map
+
+      and traverse_list cmds mat map =
+        List.fold_left (fun map c ->
+            traverse c mat map
+          ) map cmds
+      in
+      traverse_list cmds Gg.M3.id NameMap.empty
 
     (* Arrows *)
     module Arrow =
@@ -640,11 +589,23 @@ module Make(N : Name) =
 
     (* Box autolayout *)
 
+    type hposition = 
+      [ `Hcentered
+      | `Bottom
+      | `Top
+      ]
+
+    type vposition = 
+      [ `Vcentered
+      | `Left
+      | `Right
+      ]
+
     type layout =
       | Cmd of named_command
-      | Hbox of float * layout list
-      | Vbox of float * layout list
-      | Arrow of Arrow.t * layout (* an arrow makes only sense wrt point declared in a sublayout *)
+      | Hbox of { pos : hposition; deltax : float; layouts : layout list }
+      | Vbox of { pos : vposition; deltay : float; layouts : layout list }
+      | Arrow of { arrow : Arrow.t; layout : layout } (* an arrow makes only sense wrt point declared in a sublayout *)
 
     and named_command = { cmd : t list;
                           cmd_name : int option } (* this [int option] might not be the best choice *)
@@ -655,52 +616,83 @@ module Make(N : Name) =
 
     let cmd ~name:n cmds = Cmd { cmd = cmds; cmd_name = n }
 
-    let hbox ~deltax:(dx : float) ~layout_list:llist =
-      Hbox(dx, llist)
+    let hbox ?(pos=`Hcentered) ?(deltax=0.0) layouts =
+      Hbox { pos; deltax; layouts }
 
-    let vbox ~deltay:(dy : float) ~layout_list:llist =
-      Vbox(dy, llist)
+    let vbox ?(pos=`Vcentered) ?(deltay=0.0) layouts =
+      Vbox { pos; deltay; layouts }
 
     let arrow
         ~start:(s : name)
         ~finish:(f : name)
         ~sty:(sty : Arrow.style) cmd =
-      Arrow(Arrow.({ start = s; finish = f; style = sty; smart = false }), cmd)
+      Arrow { arrow = Arrow.({ start = s; finish = f; style = sty; smart = false }); layout = cmd }
 
-    let smart_arrow
-        ~start:(s : name)
-        ~finish:(f : name)
-        ~sty:(sty : Arrow.style) cmd =
-      Arrow(Arrow.({ start = s; finish = f; style = sty; smart = true }), cmd)
-
+    (* let smart_arrow *)
+    (*     ~start:(s : name) *)
+    (*     ~finish:(f : name) *)
+    (*     ~sty:(sty : Arrow.style) cmd = *)
+    (*   Arrow(Arrow.({ start = s; finish = f; style = sty; smart = true }), cmd) *)
 
 
     (* Layout algorithm *)
-
+        
+    (* horizontal alignement functions *)
+    
     (* given box1, compute displacement vector for box2 to 
      * be aligned the right of box1, in a centered way. *)
-    let align_right_centered_vector box1 box2 deltax =
+    let align_horiz_centered_vector deltax box1 box2 =
       let h1 = Bbox.height box1
       and h2 = Bbox.height box2 in
       let deltay = (h1 -. h2) *. 0.5 in
       Pt.((Bbox.se box1) - (Bbox.sw box2) + (Pt.pt deltax deltay))
 
+    (* given box1, compute displacement vector for box2 to 
+     * be aligned the right of box1, so that their bottoms sit on the same line. *)
+    let align_horiz_bottom_vector deltax box1 box2 =
+      Pt.((Bbox.se box1) - (Bbox.sw box2) + (Pt.pt deltax 0.0))
+
+    (* given box1, compute displacement vector for box2 to 
+     * be aligned the right of box1, so that their top sit on the same line. *)
+    let align_horiz_top_vector deltax box1 box2 =
+      Pt.((Bbox.ne box1) - (Bbox.nw box2) + (Pt.pt deltax 0.0))
+
     (* given box1, compute displacement vector for box2 to  *)
     (* be aligned at the bottom of box1, in a centered way. *)
-    let align_bottom_centered_vector box1 box2 deltay =
+    let align_vert_centered_vector deltay box1 box2 =
       let w1 = Bbox.width box1
       and w2 = Bbox.width box2 in
       let deltax = (w1 -. w2) *. 0.5 in
       Pt.((Bbox.sw box1) - (Bbox.nw box2) + (Pt.pt deltax (~-. deltay)))
 
+    let align_vert_left_vector deltay box1 box2 =
+      Pt.((Bbox.sw box1) - (Bbox.nw box2) + (Pt.pt 0.0 (~-. deltay)))
+
+    let align_vert_right_vector deltay box1 box2 =
+      Pt.((Bbox.se box1) - (Bbox.ne box2) + (Pt.pt 0.0 (~-. deltay)))
+
+    let horiz_align (pos : hposition) =
+      match pos with
+      | `Hcentered -> align_horiz_centered_vector
+      | `Bottom    -> align_horiz_bottom_vector
+      | `Top       -> align_horiz_top_vector
+
+    let vert_align (pos : vposition) =
+      match pos with
+      | `Vcentered -> align_vert_centered_vector
+      | `Left      -> align_vert_left_vector
+      | `Right     -> align_vert_right_vector
+
+
+
     (* invariant: must preserve order of commands *)
-    let halign l deltax =
+    let halign l align_function =
       let rec halign_aux l acc =
         match l with
         | [] -> List.rev acc
         | [elt] -> List.rev (elt :: acc)
         | (cmds1, box1) :: (cmds2, box2) :: l ->
-          let v = align_right_centered_vector box1 box2 deltax in
+          let v = align_function box1 box2 in
           let commands = [translate ~v ~subcommands:cmds2] in
           let box2     = Bbox.translate v box2 in
           halign_aux ((commands, box2) :: l) ((cmds1, box1) :: acc)
@@ -708,13 +700,13 @@ module Make(N : Name) =
       halign_aux l []
 
     (* invariant: must preserve order of commands *)
-    let valign l deltay =
+    let valign l align_function =
       let rec valign_aux l acc =
         match l with
         | [] -> List.rev acc
         | [elt] -> List.rev (elt :: acc)
         | (cmds1, box1) :: (cmds2, box2) :: l ->
-          let v = align_bottom_centered_vector box1 box2 deltay in
+          let v = align_function box1 box2 in
           let commands = [translate ~v ~subcommands:cmds2] in
           let box2     = Bbox.translate v box2 in
           valign_aux ((commands, box2) :: l) ((cmds1, box1) :: acc)
@@ -724,11 +716,11 @@ module Make(N : Name) =
     let rec depth =
       function
       | Cmd _ -> 1
-      | Hbox(_, ll)
-      | Vbox(_, ll) ->       
-        1 + (List.fold_left min max_int (List.map depth ll))
-      | Arrow(_, l) ->
-        1 + (depth l)
+      | Hbox { layouts }
+      | Vbox { layouts } ->       
+        1 + (List.min (List.map depth layouts))
+      | Arrow { layout } ->
+        1 + (depth layout)
 
     let fibers_from_list =
       let rec insert a b fibers =
@@ -763,65 +755,65 @@ module Make(N : Name) =
         let cmds = [crop named_command.cmd] in
         let named_cmds = tag cmds named_command.cmd_name in
         (named_cmds, Bbox.of_commands cmds)
-      | Hbox(deltax, ls) ->
-        let ls = List.map emit_commands_with_bbox ls in
-        let aligned = halign ls deltax in
+      | Hbox { pos; deltax; layouts } ->
+        let ls = List.map emit_commands_with_bbox layouts in
+        let aligned = halign ls (horiz_align pos deltax) in
         let (commands, boxes) = List.split aligned in
         let bbox = List.fold_left Bbox.join Bbox.empty boxes in
         let cmds = List.fold_left (@) [] commands in
         (cmds, bbox)
-      | Vbox(deltay, ls) ->
-        let ls = List.map emit_commands_with_bbox ls in
-        let aligned = valign ls deltay in
+      | Vbox { pos; deltay; layouts } ->
+        let ls = List.map emit_commands_with_bbox layouts in
+        let aligned = valign ls (vert_align pos deltay) in
         let (commands, boxes) = List.split aligned in
         let bbox = List.fold_left Bbox.join Bbox.empty boxes in
         let cmds = List.fold_left (@) [] commands in
         (cmds, bbox)
-      | Arrow(arr, sublayout) ->
-        let { Arrow.start; finish; style } = arr in
-        let (sublayout_cmds, bbox) = emit_commands_with_bbox sublayout in
-        let map   = point_map_of_commands sublayout_cmds in
-        let (s, s_cmdbox) =
+      | Arrow { arrow; layout } ->
+        let { Arrow.start; finish; style } = arrow in
+        let (cmds, bbox) = emit_commands_with_bbox layout in
+        let map   = collect_declared_points cmds in
+        let s =
           try NameMap.find start map
           with Not_found ->
             (Printf.printf "Commands.emit_commands_with_bbox: arrow start point %s was not declared\n" (N.print start);
-             let s = Tools.to_sseq print_cmd ";\n" sublayout_cmds in
+             let s = Tools.to_sseq print_cmd ";\n" cmds in
              Printf.printf "commands:\n%s\n" s;
              raise Emit_error)
         in
-        let (f, f_cmdbox) =
+        let f =
           try NameMap.find finish map
           with Not_found ->
             (Printf.printf "Commands.emit_commands_with_bbox: arrow end point %s was not declared\n" (N.print finish);
-             let s = Tools.to_sseq print_cmd ";\n" sublayout_cmds in
+             let s = Tools.to_sseq print_cmd ";\n" cmds in
              Printf.printf "commands:\n%s\n" s;
              raise Emit_error)
         in
-        if arr.Arrow.smart then
-          (match s_cmdbox, f_cmdbox with
-           | None, _
-           | _, None ->
-             failwith "Commands.emit_commands_with_bbox: some endpoints of a smart arrow belong to an unnamed boxes"
-           | Some si, Some fi ->
-             (* partition commands by their tag *)
-             let fibers = fibers_from_list sublayout_cmds in
-             (* extract all commands whose tag is different from s_cmdbox and f_cmdbox and None *)
-             let fibers =
-               List.filter
-                 (fun (tag, _) ->
-                    tag <> None && tag <> s_cmdbox && tag <> f_cmdbox
-                 ) fibers
-             in
-             (* compute bounding boxes for each tag *)
-             let bboxes = List.map (fun (tag, cmds) -> Bbox.of_commands cmds) fibers in
-             let solution = SmartPath.produce_path (2.0 ** (float (depth sublayout))) s f bboxes in
-             (* produce_path  *)
-             let cmds = tag (Arrow.mk_multisegment_arrow style solution) None in
-             (cmds @ sublayout_cmds,  Bbox.join (Bbox.of_commands cmds) bbox)
-          )
-        else
-          let cmds  = tag (Arrow.mkarrow style s f) None in
-          (cmds @ sublayout_cmds,  Bbox.join (Bbox.of_commands cmds) bbox)
+        (* if arr.Arrow.smart then *)
+        (*   (match s_cmdbox, f_cmdbox with *)
+        (*    | None, _ *)
+        (*    | _, None -> *)
+        (*      failwith "Commands.emit_commands_with_bbox: some endpoints of a smart arrow belong to an unnamed boxe" *)
+        (*    | Some si, Some fi -> *)
+        (*      (\* partition commands by their tag *\) *)
+        (*      let fibers = fibers_from_list sublayout_cmds in *)
+        (*      (\* extract all commands whose tag is different from s_cmdbox and f_cmdbox and None *\) *)
+        (*      let fibers = *)
+        (*        List.filter *)
+        (*          (fun (tag, _) -> *)
+        (*             tag <> None && tag <> s_cmdbox && tag <> f_cmdbox *)
+        (*          ) fibers *)
+        (*      in *)
+        (*      (\* compute bounding boxes for each tag *\) *)
+        (*      let bboxes = List.map (fun (tag, cmds) -> Bbox.of_commands cmds) fibers in *)
+        (*      let solution = SmartPath.produce_path (2.0 ** (float (depth sublayout))) s f bboxes in *)
+        (*      (\* produce_path  *\) *)
+        (*      let cmds = tag (Arrow.mk_multisegment_arrow style solution) None in *)
+        (*      (cmds @ sublayout_cmds,  Bbox.join (Bbox.of_commands cmds) bbox) *)
+        (*   ) *)
+        (* else *)
+          let tagged  = tag (Arrow.mkarrow style s f) None in
+          (tagged @ cmds,  Bbox.join (Bbox.of_commands tagged) bbox)
     (* let ls = List.map emit_commands_with_bbox ls in *)
 
     let emit_commands l =

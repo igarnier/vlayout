@@ -49,26 +49,21 @@ module type CommandsSig =
     module Bbox :
     sig
       include Bbox.S
-      (* type t = Bbox.t *)
-      (* val box : Pt.t -> Pt.t -> t *)
-      (* val empty : t *)
-      (* val center : t -> Pt.t *)
-      (* val width : t -> float *)
-      (* val height : t -> float *)
-      (* val join : t -> t -> t *)
-      (* val of_points : Pt.t list -> t *)
-      (* val se : t -> Pt.t *)
-      (* val sw : t -> Pt.t *)
-      (* val ne : t -> Pt.t *)
-      (* val nw : t -> Pt.t *)
-      (* val print : t -> string *)
+
       val of_command :  alias -> t
       val of_commands : alias list -> t
     end
 
     module Arrow :
     sig
-      type style
+      type style =
+        {
+          startp : float; (* [0,1] *)
+          endp   : float; (* [0,1] *)
+          arrowp : float; (* [0,1] *)
+          legs   : float; (* legs length, >= 0 *)
+          angle  : float  (* legs angle *)
+        }
 
       val default_style : style
       val mid_style     : style
@@ -93,22 +88,32 @@ module type CommandsSig =
     val scale     : xs:float -> ys:float -> subcommands:(t list) -> t
 
     val center_to_page : float*float -> t list -> t list
-    (* val translate : t list -> Pt.t -> t list *)
-    (* val scale : t list -> Pt.t -> t list *)
-    (* val map_pt : t list -> (Pt.t -> Pt.t) -> t list *)
+
+
+    type hposition = 
+      [ `Hcentered
+      | `Bottom
+      | `Top
+      ]
+
+    type vposition = 
+      [ `Vcentered
+      | `Left
+      | `Right
+      ]
 
     type layout
 
     val cmd  : name:(int option) -> t list -> layout
-    val hbox : deltax:float -> layout_list:(layout list) -> layout
-    val vbox : deltay:float -> layout_list:(layout list) -> layout
+    val hbox : ?pos:hposition -> ?deltax:float -> layout list -> layout
+    val vbox : ?pos:vposition -> ?deltay:float -> layout list -> layout
 
     val arrow : start:name -> finish:name -> sty:Arrow.style -> layout -> layout
-    val smart_arrow : start:name -> finish:name -> sty:Arrow.style -> layout -> layout
+    (* val smart_arrow : start:name -> finish:name -> sty:Arrow.style -> layout -> layout *)
 
     val emit_commands_with_bbox : layout -> t list * Bbox.t
     val emit_commands : layout -> t list
-    (* val emit_commands_centered : float * float -> layout -> t list *)
+
   end
     
 module Make : functor (N : Name) -> (CommandsSig with type name = N.t)

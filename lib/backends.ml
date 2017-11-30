@@ -29,6 +29,8 @@ struct
       Cairo.set_source ctx patt
 
   let perform_stroke_and_fill_opt ctx fill_opt =
+    let ux, uy = Cairo.device_to_user_distance ctx 1. 1. in
+    Cairo.set_line_width ctx (max ux uy);
     match fill_opt with
     | None ->
       Cairo.stroke ctx
@@ -87,11 +89,11 @@ struct
     let twidth  = 1.1 *. extents.Cairo.width in
     let theight = extents.Cairo.height in
     (* We must scale by a factor (sx, sy) so that
-       the printed font fits maximally the prescribed /width,height/ 
+       the printed font fits maximally the prescribed /width,height/
        rectangle in local space while still being
        square in screen space. Therefore, (sx,sy) must satisfy:
        sx * xscale = - sy * yscale, (minus sign because screen coords have origin on top)
-       (width = sx * twidth (or) height = sy * theight) 
+       (width = sx * twidth (or) height = sy * theight)
         and sx * twidth <= width && sy * theight <= height
     *)
     let xratio = width /. twidth in
@@ -100,7 +102,7 @@ struct
       if xratio <= yratio then
         let sx = xratio in
         let sy = sx *. (xscale /. yscale) in
-        (~-. sx, ~-. sy)
+        (sx, sy)
       else
         let sy = yratio in
         let sx = sy *. (yscale /. xscale) in
