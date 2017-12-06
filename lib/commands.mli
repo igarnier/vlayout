@@ -26,13 +26,14 @@ module type CommandsSig =
 
     type t =
       {
-        tag  : int option;
+        uid  : int;
         desc : desc
       }
      and desc =
        | Circle  of { center : Pt.t; radius : float }
        | Box     of { mins : Pt.t; maxs : Pt.t }
-       | Text    of { pos : position; width : float; height : float; text : string }
+       (* | Text    of { pos : position; width : float; height : float; text : string } *)
+       | Text    of { pos : position; text : Ctext.t }
        | Style   of { style : Style.t; subcommands : t list }
        | Segment of { p1 : Pt.t; p2 : Pt.t }
        | Bezier  of { p1 : Pt.t; c1 : Pt.t; p2 : Pt.t; c2 : Pt.t }
@@ -40,7 +41,7 @@ module type CommandsSig =
        | DeclPt  of { pt : Pt.t; name : name }
        | Rotate  of { radians : float; subcommands : t list }
        | Translate of { v : Pt.t; subcommands : t list }
-       | Scale of { xs : float; ys : float; subcommands : t list }
+       | Scale   of { xs : float; ys : float; subcommands : t list }
                     
     type alias = t
 
@@ -76,7 +77,8 @@ module type CommandsSig =
 
     val circle    : center:Pt.t -> radius:float -> t
     val box       : mins:Pt.t -> maxs:Pt.t -> t
-    val text      : pos:position -> width:float -> height:float -> text:string -> t
+    (* val text      : pos:position -> width:float -> height:float -> text:string -> t *)
+    val text      : pos:position -> size:float -> text:string -> t
     val style     : style:Style.t -> subcommands:(t list) -> t
     val segment   : p1:Pt.t -> p2:Pt.t -> t
     val bezier    : p1:Pt.t -> c1:Pt.t -> p2:Pt.t -> c2:Pt.t -> t
@@ -87,8 +89,13 @@ module type CommandsSig =
     val translate : v:Pt.t -> subcommands:(t list) -> t
     val scale     : xs:float -> ys:float -> subcommands:(t list) -> t
 
+    val print : t -> string
+
     val center_to_page : float*float -> t list -> t list
 
+    module NameMap : Map.S with type key = name
+
+    val collect_declared_points : t list -> Pt.t NameMap.t
 
     type hposition = 
       [ `Hcentered
@@ -104,7 +111,7 @@ module type CommandsSig =
 
     type layout
 
-    val cmd  : name:(int option) -> t list -> layout
+    val cmd  : t list -> layout
     val hbox : ?pos:hposition -> ?deltax:float -> layout list -> layout
     val vbox : ?pos:vposition -> ?deltay:float -> layout list -> layout
 

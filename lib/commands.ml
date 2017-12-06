@@ -1,4 +1,3 @@
-open Batteries
 
 module type Name =
 sig
@@ -25,13 +24,14 @@ sig
 
   type t =
     {
-      tag  : int option;
+      uid  : int;
       desc : desc
     }
   and desc =
     | Circle  of { center : Pt.t; radius : float }
     | Box     of { mins : Pt.t; maxs : Pt.t }
-    | Text    of { pos : position; width : float; height : float; text : string }
+    (* | Text    of { pos : position; width : float; height : float; text : string } *)
+    | Text    of { pos : position; text : Ctext.t }
     | Style   of { style : Style.t; subcommands : t list }
     | Segment of { p1 : Pt.t; p2 : Pt.t }
     | Bezier  of { p1 : Pt.t; c1 : Pt.t; p2 : Pt.t; c2 : Pt.t }
@@ -74,7 +74,8 @@ sig
 
   val circle  : center:Pt.t -> radius:float -> t
   val box     : mins:Pt.t -> maxs:Pt.t -> t
-  val text    : pos:position -> width:float -> height:float -> text:string -> t
+  (* val text    : pos:position -> width:float -> height:float -> text:string -> t *)
+  val text   : pos:position -> size:float -> text:string -> t
   val style   : style:Style.t -> subcommands:(t list) -> t
   val segment : p1:Pt.t -> p2:Pt.t -> t
   val bezier  : p1:Pt.t -> c1:Pt.t -> p2:Pt.t -> c2:Pt.t -> t
@@ -85,11 +86,13 @@ sig
   val translate : v:Pt.t -> subcommands:(t list) -> t
   val scale     : xs:float -> ys:float -> subcommands:(t list) -> t
 
-  (* val crop : t list -> t list *)
+  val print : t -> string
+
   val center_to_page : float*float -> t list -> t list
-  (* val translate : t list -> Pt.t -> t list *)
-  (* val scale : t list -> Pt.t -> t list *)
-  (* val map_pt : t list -> (Pt.t -> Pt.t) -> t list *)
+
+  module NameMap : Map.S with type key = name
+
+  val collect_declared_points : t list -> Pt.t NameMap.t
 
   type hposition = 
     [ `Hcentered
@@ -105,7 +108,7 @@ sig
 
   type layout
 
-  val cmd  : name:(int option) -> t list -> layout
+  val cmd  : t list -> layout
   val hbox : ?pos:hposition -> ?deltax:float -> layout list -> layout
   val vbox : ?pos:vposition -> ?deltay:float -> layout list -> layout
 
@@ -116,6 +119,8 @@ sig
   (* val emit_commands_centered : float * float -> layout -> t list *)
 
 end
+
+open Batteries
 
 module Make(N : Name) =
   (struct
@@ -148,13 +153,14 @@ module Make(N : Name) =
 
     type t =
       {
-        tag  : int option;
+        uid  : int;
         desc : desc
       }
     and desc =
       | Circle  of { center : Pt.t; radius : float }
       | Box     of { mins : Pt.t; maxs : Pt.t }
-      | Text    of { pos : position; width : float; height : float; text : string }
+      (* | Text    of { pos : position; width : float; height : float; text : string } *)
+      | Text   of { pos : position; text : Ctext.t }
       | Style   of { style : Style.t; subcommands : t list }
       | Segment of { p1 : Pt.t; p2 : Pt.t }
       | Bezier  of { p1 : Pt.t; c1 : Pt.t; p2 : Pt.t; c2 : Pt.t }
@@ -178,48 +184,53 @@ module Make(N : Name) =
       let c2   = Pt.plus p2 vec2 in
       (c1, c2)
 
+    let fresh =
+      let acc = ref (-1) in
+      fun () ->
+        incr acc;
+        !acc
 
-    let mktag tag desc = { tag; desc }
+    let mktag desc = { uid = fresh (); desc }
 
     let circle ~center ~radius =
-      mktag None (Circle { center; radius })
+      mktag (Circle { center; radius })
 
     let box ~mins ~maxs =
-      mktag None (Box { mins; maxs })
+      mktag (Box { mins; maxs })
 
-    let text ~pos ~width ~height ~text =
-      mktag None (Text { pos; width; height; text })
+    (* let text ~pos ~width ~height ~text = *)
+    (*   mktag (Text { pos; width; height; text }) *)
+
+    let text ~pos ~size ~text =
+      mktag (Text { pos; text = Ctext.create ~size text })
 
     let style ~style ~subcommands =
-      mktag None (Style { style; subcommands })
-
-    (* let color ~tag ~r ~g ~b = *)
-    (*   pattern tag Pattern.(Solid { c = { r; g; b } }) *)
+      mktag (Style { style; subcommands })
 
     let segment ~p1 ~p2 =
-      mktag None (Segment { p1; p2 })
+      mktag (Segment { p1; p2 })
 
     let bezier ~p1 ~c1 ~p2 ~c2 =
-      mktag None (Bezier { p1; c1; p2; c2 })
+      mktag (Bezier { p1; c1; p2; c2 })
 
     let ubezier ~p1 ~p2 ~angle =
       let (c1, c2) = ubezier_control_points p1 p2 angle in
       bezier ~p1:p1 ~c1:c1 ~p2:p2 ~c2:c2
 
     let image ~pos ~image =
-      mktag None (Image { pos; image })
+      mktag (Image { pos; image })
 
     let declpt ~pt ~name =
-      mktag None (DeclPt { pt; name })
+      mktag (DeclPt { pt; name })
 
     let rotate ~radians ~subcommands =
-      mktag None (Rotate { radians; subcommands })
+      mktag (Rotate { radians; subcommands })
 
     let translate ~v ~subcommands =
-      mktag None (Translate { v; subcommands })
+      mktag (Translate { v; subcommands })
 
     let scale ~xs ~ys ~subcommands =
-      mktag None (Scale { xs; ys; subcommands })
+      mktag (Scale { xs; ys; subcommands })
 
 
     (* Each basic command (type t) is associated to a designated point we call the "anchor"  *)
@@ -239,6 +250,7 @@ module Make(N : Name) =
       match c.desc with
       | Circle { center }  -> center
       | Box { mins; maxs } -> mid mins maxs
+      (* | Text { pos } -> point_of_position pos *)
       | Text { pos } -> point_of_position pos
       | Segment { p1; p2 } -> mid p1 p2
       | Bezier { p1; c1; p2; c2 } ->
@@ -267,17 +279,19 @@ module Make(N : Name) =
              (declpt (anchor_of edge) name) :: edge :: acc
           ) [] l
 
-    let rec print_cmd c =
+    let rec print c =
       Printf.(
         match c.desc with
         | Circle { center; radius } ->
           sprintf "Circle(%s, %f)" (Pt.print center) radius
         | Box { mins; maxs } ->
           sprintf "Box(%s, %s)" (Pt.print mins) (Pt.print maxs)
-        | Text { pos; width; height; text } ->
-          sprintf "Text(%s, %f, %f, %s)" (print_position pos) width height text
+        (* | Text { pos; width; height; text } -> *)
+        (*   sprintf "Text(%s, %f, %f, %s)" (print_position pos) width height text *)
+        | Text { pos; text } ->
+          sprintf "Text(%s, %s)" (print_position pos) text.Ctext.str
         | Style { style; subcommands } ->
-          let s    = Tools.to_sseq print_cmd "; " subcommands in          
+          let s    = Tools.to_sseq print "; " subcommands in          
           sprintf "Style(%s, %s)" (Style.print style) s
         | Segment { p1; p2 } ->
           sprintf "Segment(%s, %s)" (Pt.print p1) (Pt.print p2)
@@ -291,17 +305,16 @@ module Make(N : Name) =
         | DeclPt { pt; name } ->
           sprintf "DeclPt(%s, %s)" (Pt.print pt) (N.print name)
         | Rotate { radians; subcommands } ->
-          let s    = Tools.to_sseq print_cmd "; " subcommands in
+          let s    = Tools.to_sseq print "; " subcommands in
           sprintf "Rotate(%f, %s)" radians s
         | Translate { v; subcommands } ->
-          let s    = Tools.to_sseq print_cmd "; " subcommands in
+          let s    = Tools.to_sseq print "; " subcommands in
           sprintf "Translate(%s, %s)" (Pt.print v) s
         | Scale { xs; ys; subcommands } ->
-          let s    = Tools.to_sseq print_cmd "; " subcommands in
+          let s    = Tools.to_sseq print "; " subcommands in
           sprintf "Scale(%f, %f, %s)" xs ys s
       )         
 
-    module NameMap = Map.Make(N)
 
     let base_of_positioned_box h w { pos; relpos } =
       let x = Pt.x pos and y = Pt.y pos in
@@ -340,10 +353,15 @@ module Make(N : Name) =
           box (Pt.pt (x -. radius) (y -. radius)) (Pt.pt (x +. radius) (y +. radius))
         | Box { mins; maxs } ->
           box mins maxs
-        | Text { pos; width; height; text } ->          
-          (* let max_h = size in *)
-          (* let max_w = max_h *. (float (String.length text)) in *)
-          let base  = text_position pos width height in
+        (* | Text { pos; width; height; text } ->           *)
+        (*   (\* let max_h = size in *\) *)
+        (*   (\* let max_w = max_h *. (float (String.length text)) in *\) *)
+        (*   let base  = text_position pos width height in *)
+        (*   box base Pt.(base + (pt width height)) *)
+        | Text { pos; text } -> 
+          let width  = Bbox.width text.Ctext.box in
+          let height = Bbox.height text.Ctext.box in
+          let base   = text_position pos width height in
           box base Pt.(base + (pt width height))
         | Segment { p1; p2 } ->
           let x1 = Pt.x p1 and y1 = Pt.y p1 in
@@ -375,10 +393,6 @@ module Make(N : Name) =
     end
 
 
-    let tag (commands : t list) (tag : int option) : t list =
-      List.map (fun c -> { c with tag }) commands
-
-
     let center_to_page (w, h) (commands : t list) =
       let b      = Bbox.of_commands commands in
       let boxw   = Bbox.width b in
@@ -392,34 +406,14 @@ module Make(N : Name) =
       let b = Bbox.of_commands commands in
       translate ~v:(Pt.scale (Bbox.sw b) (~-. 1.0)) ~subcommands:commands
 
-    let rec point_map_of_commands cmds acc =
-      List.fold_left
-        (fun acc c ->
-           match c.desc with
-           | Circle _
-           | Box _
-           | Text _
-           | Segment _
-           | Bezier _
-           | Image _ -> acc
-           | Style { subcommands }
-           | Rotate { subcommands }
-           | Translate { subcommands } 
-           | Scale { subcommands } ->
-             point_map_of_commands subcommands acc
-           | DeclPt { pt; name } ->
-             NameMap.add name (pt, c.tag) acc
-        ) acc cmds
-
-    let point_map_of_commands cmds =
-      point_map_of_commands cmds NameMap.empty
-
+    module NameMap = Legacy.Map.Make(N)
 
     let collect_declared_points cmds =
       let rec traverse cmd mat map =
         match cmd.desc with
         | Circle _
         | Box _
+        (* | Text _ *)
         | Text _
         | Style _
         | Segment _
@@ -602,19 +596,16 @@ module Make(N : Name) =
       ]
 
     type layout =
-      | Cmd of named_command
+      | Cmd of t list
       | Hbox of { pos : hposition; deltax : float; layouts : layout list }
       | Vbox of { pos : vposition; deltay : float; layouts : layout list }
       | Arrow of { arrow : Arrow.t; layout : layout } (* an arrow makes only sense wrt point declared in a sublayout *)
-
-    and named_command = { cmd : t list;
-                          cmd_name : int option } (* this [int option] might not be the best choice *)
 
 
 
     (* A public interface to build stuff in [layout] *)
 
-    let cmd ~name:n cmds = Cmd { cmd = cmds; cmd_name = n }
+    let cmd cmds = Cmd cmds
 
     let hbox ?(pos=`Hcentered) ?(deltax=0.0) layouts =
       Hbox { pos; deltax; layouts }
@@ -722,24 +713,24 @@ module Make(N : Name) =
       | Arrow { layout } ->
         1 + (depth layout)
 
-    let fibers_from_list =
-      let rec insert a b fibers =
-        match fibers with
-        | [] ->
-          [(b, [a])]
-        | ((b', l) as b'_fiber) :: tl ->
-          if b = b' then
-            (b', a :: l) :: tl
-          else
-            b'_fiber :: (insert a b tl)
-      in
-      let rec loop l acc =
-        match l with
-        | [] -> acc
-        | c :: tl ->
-          loop tl (insert c c.tag acc)
-      in
-      fun l -> loop l []
+    (* let fibers_from_list = *)
+    (*   let rec insert a b fibers = *)
+    (*     match fibers with *)
+    (*     | [] -> *)
+    (*       [(b, [a])] *)
+    (*     | ((b', l) as b'_fiber) :: tl -> *)
+    (*       if b = b' then *)
+    (*         (b', a :: l) :: tl *)
+    (*       else *)
+    (*         b'_fiber :: (insert a b tl) *)
+    (*   in *)
+    (*   let rec loop l acc = *)
+    (*     match l with *)
+    (*     | [] -> acc *)
+    (*     | c :: tl -> *)
+    (*       loop tl (insert c c.tag acc) *)
+    (*   in *)
+    (*   fun l -> loop l [] *)
 
 
     exception Emit_error
@@ -751,10 +742,10 @@ module Make(N : Name) =
     *)
     let rec emit_commands_with_bbox (l : layout) : ((t list) * Bbox.t) =
       match l with
-      | Cmd named_command ->
-        let cmds = [crop named_command.cmd] in
-        let named_cmds = tag cmds named_command.cmd_name in
-        (named_cmds, Bbox.of_commands cmds)
+      | Cmd cmds ->
+        let cmds = [crop cmds] in
+        (* let named_cmds = tag cmds named_command.cmd_name in *)
+        (cmds, Bbox.of_commands cmds)
       | Hbox { pos; deltax; layouts } ->
         let ls = List.map emit_commands_with_bbox layouts in
         let aligned = halign ls (horiz_align pos deltax) in
@@ -777,7 +768,7 @@ module Make(N : Name) =
           try NameMap.find start map
           with Not_found ->
             (Printf.printf "Commands.emit_commands_with_bbox: arrow start point %s was not declared\n" (N.print start);
-             let s = Tools.to_sseq print_cmd ";\n" cmds in
+             let s = Tools.to_sseq print ";\n" cmds in
              Printf.printf "commands:\n%s\n" s;
              raise Emit_error)
         in
@@ -785,7 +776,7 @@ module Make(N : Name) =
           try NameMap.find finish map
           with Not_found ->
             (Printf.printf "Commands.emit_commands_with_bbox: arrow end point %s was not declared\n" (N.print finish);
-             let s = Tools.to_sseq print_cmd ";\n" cmds in
+             let s = Tools.to_sseq print ";\n" cmds in
              Printf.printf "commands:\n%s\n" s;
              raise Emit_error)
         in
@@ -812,8 +803,8 @@ module Make(N : Name) =
         (*      (cmds @ sublayout_cmds,  Bbox.join (Bbox.of_commands cmds) bbox) *)
         (*   ) *)
         (* else *)
-          let tagged  = tag (Arrow.mkarrow style s f) None in
-          (tagged @ cmds,  Bbox.join (Bbox.of_commands tagged) bbox)
+        let arrow  = Arrow.mkarrow style s f in
+        (arrow @ cmds,  Bbox.join (Bbox.of_commands arrow) bbox)
     (* let ls = List.map emit_commands_with_bbox ls in *)
 
     let emit_commands l =

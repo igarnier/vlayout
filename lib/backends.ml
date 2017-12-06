@@ -28,13 +28,33 @@ struct
         ) stops;
       Cairo.set_source ctx patt
 
-  let perform_stroke_and_fill_opt ctx fill_opt =
+  (* Perform the stroke at uniform scale, so that *)
+  let stroke_uniform_scale ctx =
+    Cairo.save ctx;
+    let m       = Cairo.get_matrix ctx in
+    let m = { m with xx = 1.0; yy = 1.0 } in
+    Cairo.set_matrix ctx m;
+    (* let ux, uy = Cairo.device_to_user_distance ctx 1. 1. in *)
+    (* Cairo.set_line_width ctx (max ux uy); *)
+    Cairo.stroke ctx;
+    Cairo.restore ctx
+
+  let stroke_preserve_uniform_scale ctx =
+    Cairo.save ctx;
+    let m       = Cairo.get_matrix ctx in
+    let m = { m with xx = 1.0; yy = 1.0 } in
+    Cairo.set_matrix ctx m;
     let ux, uy = Cairo.device_to_user_distance ctx 1. 1. in
     Cairo.set_line_width ctx (max ux uy);
+    Cairo.stroke_preserve ctx;
+    Cairo.restore ctx
+    
+  let perform_stroke_and_fill_opt ctx fill_opt =
     match fill_opt with
     | None ->
-      Cairo.stroke ctx
+      stroke_uniform_scale ctx
     | Some fill_pattern ->
+      stroke_preserve_uniform_scale ctx;
       Cairo.stroke_preserve ctx;
       Cairo.save ctx;
       set_pattern ctx fill_pattern;
@@ -74,6 +94,14 @@ struct
         let r1 = r1 *. w in
         Some (Style.Radial { c0; r0; c1; r1; stops })
 
+  let render_box ctx mins maxs =
+    let open Pt in
+    Cairo.move_to ctx (x mins) (y mins);
+    Cairo.line_to ctx (x mins) (y maxs);
+    Cairo.line_to ctx (x maxs) (y maxs);
+    Cairo.line_to ctx (x maxs) (y mins);
+    Cairo.Path.close ctx
+
   (* for debug *)
   let print_scale ctx =
     let m       = Cairo.get_matrix ctx in
@@ -81,13 +109,62 @@ struct
     let yscale  = m.Cairo.yy in
     Printf.printf "scale: %f %f\n" xscale yscale
 
+  let text_bbox ctx str =
+    (* Using Christophe Troestler's notes at
+       http://archimedes.forge.ocamlcore.org/cairo/textextents.ml *)
+    let fe = Cairo.font_extents ctx in
+    let te = Cairo.text_extents ctx str in
+    let x  = 0.5 -. te.x_bearing -. te.width /. 2.
+    and y  = 0.5 -. fe.descent +. fe.baseline /. 2. in
+    let pos = Pt.pt x y in
+    let mins = Pt.pt (x +. te.x_bearing) (y +. te.y_bearing) in
+    let maxs = Pt.(mins + (pt te.width te.height)) in
+    (pos, Bbox.box mins maxs)
+
+  (* let display_text ctx pos width height text fill_opt = *)
+  (*   let m       = Cairo.get_matrix ctx in *)
+  (*   let xscale  = m.Cairo.xx in *)
+  (*   let yscale  = m.Cairo.yy in *)
+  (*   let tpos, tbox = text_bbox ctx text in *)
+  (*   let twidth  = Bbox.width tbox in *)
+  (*   let theight = Bbox.height tbox in *)
+  (*   (\* let extents = Cairo.text_extents ctx text in *\) *)
+  (*   (\* let twidth  = 1.1 *. extents.Cairo.width in *\) *)
+  (*   (\* let theight = extents.Cairo.height in *\) *)
+  (*   (\* We must scale by a factor (sx, sy) so that *)
+  (*      the printed font fits maximally the prescribed /width,height/ *)
+  (*      rectangle in local space while still being *)
+  (*      square in screen space. Therefore, (sx,sy) must satisfy: *)
+  (*      sx * xscale = - sy * yscale, (minus sign because screen coords have origin on top) *)
+  (*      (width = sx * twidth (or) height = sy * theight) *)
+  (*       and sx * twidth <= width && sy * theight <= height *)
+  (*   *\) *)
+  (*   let xratio = width /. twidth in *)
+  (*   let yratio = height /. theight in *)
+  (*   let sx, sy = *)
+  (*     if xratio <= yratio then *)
+  (*       let sx = xratio in *)
+  (*       let sy = sx *. (xscale /. yscale) in *)
+  (*       (sx, sy) *)
+  (*     else *)
+  (*       let sy = yratio in *)
+  (*       let sx = sy *. (yscale /. xscale) in *)
+  (*       (~-. sx, ~-. sy) *)
+  (*   in *)
+  (*   let width  = twidth *. sx in *)
+  (*   let height = ~-. theight *. sy in *)
+  (*   let p      = C.text_position pos width height in *)
+  (*   Cairo.move_to ctx (Pt.x p) (Pt.y p); *)
+  (*   Cairo.save ctx; *)
+  (*   Cairo.scale ctx ~x:sx ~y:sy; *)
+  (*   Cairo.show_text ctx text; *)
+  (*   Cairo.restore ctx; *)
+  (*   perform_stroke_and_fill_opt ctx fill_opt *)
+
   let display_text ctx pos width height text fill_opt =
-    let m       = Cairo.get_matrix ctx in
-    let xscale  = m.Cairo.xx in
-    let yscale  = m.Cairo.yy in
-    let extents = Cairo.text_extents ctx text in
-    let twidth  = 1.1 *. extents.Cairo.width in
-    let theight = extents.Cairo.height in
+    (* let extents = Cairo.text_extents ctx text in *)
+    (* let twidth  = 1.1 *. extents.Cairo.width in *)
+    (* let theight = extents.Cairo.height in *)
     (* We must scale by a factor (sx, sy) so that
        the printed font fits maximally the prescribed /width,height/
        rectangle in local space while still being
@@ -96,61 +173,74 @@ struct
        (width = sx * twidth (or) height = sy * theight)
         and sx * twidth <= width && sy * theight <= height
     *)
+    (* basepoint and bbox of the text as displayed in the current context *)
+    let tpos, tbox = text_bbox ctx text in
+    let twidth  = Bbox.width tbox in
+    let theight = Bbox.height tbox in
+    (* ratio of the current bbox w.r.t. the target size *)
     let xratio = width /. twidth in
     let yratio = height /. theight in
-    let sx, sy =
-      if xratio <= yratio then
-        let sx = xratio in
-        let sy = sx *. (xscale /. yscale) in
-        (sx, sy)
-      else
-        let sy = yratio in
-        let sx = sy *. (yscale /. xscale) in
-        (~-. sx, ~-. sy)
-    in
-    let width  = twidth *. sx in
-    let height = ~-. theight *. sy in
+    (* we're going to scale the text so that it fits maximally snugly
+       in the target bbox *)
+    let tscale = min xratio yratio in
+    let m      = Cairo.get_matrix ctx in
+    (* we're also going to scale the text so that the scaling is uniform *)
+    let xscale = m.Cairo.xx in
+    let yscale = m.Cairo.yy in
+    let mscale = min (abs_float xscale) (abs_float yscale) in
+    let xsign  = if xscale < 0.0 then -. 1.0 else 1.0 in
+    let ysign  = if yscale < 0.0 then -. 1.0 else 1.0 in
+    let scale  = tscale *. mscale in
+    (* -sign on the y axis because we use the reversed frame *)
+    let m = { m with xx =     xsign *. scale; 
+                     yy = ~-. ysign *. scale } in
+    (* compute target text start "position" w.r.t. [pos] relative positioning
+       spec. *)
     let p      = C.text_position pos width height in
+    (* render_box ctx p Pt.(p + (pt width height)); *)
+    (* perform_stroke_and_fill_opt ctx fill_opt; *)
+    (* [p] corresponds to the southwest of the text bbox, but
+       Cairo expects a basepoint. *)
+    let p = Pt.(p + (scale (Bbox.nw tbox - tpos) tscale)) in
     Cairo.move_to ctx (Pt.x p) (Pt.y p);
     Cairo.save ctx;
-    Cairo.scale ctx ~x:sx ~y:sy;
+    Cairo.set_matrix ctx m;
     Cairo.show_text ctx text;
     Cairo.restore ctx;
     perform_stroke_and_fill_opt ctx fill_opt
+
 
   let rec render ctx fill_opt cmd =
     match cmd.C.desc with
     | C.Circle { center; radius } ->
       let x = Pt.x center and y = Pt.y center in
       Cairo.arc ctx ~x ~y ~r:radius ~a1:0.0 ~a2:(2.0 *. Tools.pi);
-      (* Cairo.save ctx; *)
-      (* Cairo.translate ctx x y; *)
-      (* Cairo.scale ctx ~x:radius ~y:radius; *)
-      (* Cairo.arc ctx ~x:0.0 ~y:0.0 ~r:1.0 ~a1:0.0 ~a2:(2.0 *. Tools.pi); *)
-      (* translate cr (x +. width /. 2.) (y +. height /. 2.); *)
-      (* scale cr (width /. 2.) (height /. 2.); *)
-      (* arc cr 0. 0. 1. 0. (2 * pi); *)
-
-      (* Cairo.arc ctx 0.0 0.0 1.0 0.0 (2.0 *. Tools.pi); *)
-      (* Cairo.restore ctx; *)
-      (* Cairo.translate ctx x y; *)
-      (* Cairo.arc ctx 0.0 0.0 radius 0.0 (2.0 *. Tools.pi); *)
-      (* Cairo.translate ctx (-. x) (-.y); *)
       perform_stroke_and_fill_opt ctx fill_opt
-
     | C.Box { mins; maxs } ->
-      Pt.(
-        Cairo.move_to ctx (x mins) (y mins);
-        Cairo.line_to ctx (x mins) (y maxs);
-        Cairo.line_to ctx (x maxs) (y maxs);
-        Cairo.line_to ctx (x maxs) (y mins);
-        Cairo.Path.close ctx;
-        perform_stroke_and_fill_opt ctx fill_opt          
-      )
-    | C.Text { pos; width; height; text } ->
-      if text = "" then ()
+      render_box ctx mins maxs;
+      perform_stroke_and_fill_opt ctx fill_opt          
+    (* | C.Text { pos; width; height; text } -> *)
+    (*   if text = "" then () *)
+    (*   else *)
+    (*     display_text ctx pos width height text fill_opt *)
+    | C.Text { pos; text } ->
+      if text.Ctext.str = "" then ()
       else
-        display_text ctx pos width height text fill_opt
+        (let base = text.Ctext.base in
+         let box  = text.Ctext.box in
+         let delta = Pt.(base - (Bbox.sw box)) in
+         let w     = Bbox.width box in
+         let h     = Bbox.height box in
+         let llc  = C.text_position pos w h in
+         let llc  = Pt.(llc + delta) in
+         (Cairo.save ctx;
+          Cairo.move_to ctx (Pt.x llc) (Pt.y llc);
+          Cairo.Scaled_font.set ctx text.Ctext.font;
+          Cairo.show_text ctx text.str;
+          Cairo.restore ctx;
+          perform_stroke_and_fill_opt ctx fill_opt
+         )
+        )
     | C.Style { style; subcommands } ->
       let bbox          = C.Bbox.of_commands subcommands in
       let adjusted_fill = adjust_fill_to_bbox bbox style.Style.fill in 
