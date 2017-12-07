@@ -1,5 +1,3 @@
-module Log = Log.Make(struct let section = "Style" end)
-
 open Batteries
 
 (** r/g/b/ color; the values are meant to be in [0,1]. As an example, the color red
@@ -24,8 +22,7 @@ let white = { r = 1.0; g = 1.0; b = 1.0 }
               
 let gray p =
   if p < 0.0 || p > 1.0 then
-    (Log.error "gray percentage must be in [0,1]";
-     exit 0)
+    invalid_arg "gray percentage must be in [0,1]"
   else
     { r = p; g = p; b = p }
 
@@ -154,3 +151,63 @@ let simple_horizontal_gradient ~clr1 ~clr2 =
   let p1 = Pt.pt 1.0 0.0 in
   let stops = [ (clr1, 0.0); (clr2, 1.0) ] in
   Linear { p0; p1; stops }
+
+let solid clr = make ~stroke:(Solid { c = clr }) ~width:None ~fill:None ~dash:None
+
+module Solid =
+  struct
+    
+    let red   = solid red 
+    let green = solid green
+    let blue  = solid blue
+    let gray  = solid (gray 0.5)
+    let black = solid black
+
+    let pink  = 
+      let c = rgb (255. /. 255.) (105. /. 255.) (180. /. 255.) in
+      solid c
+
+    let cyan  = 
+      let c = rgb 0.0 (255. /. 255.) (255. /. 255.) in
+      solid c
+
+  end
+
+module DotDash =
+  struct
+    
+    let red   = with_dash ~style:Solid.red ~dash:dot_dash
+    let green = with_dash ~style:Solid.green ~dash:dot_dash
+    let blue  = with_dash ~style:Solid.blue ~dash:dot_dash
+    let gray  = with_dash ~style:Solid.gray ~dash:dot_dash
+    let black  = with_dash ~style:Solid.black ~dash:dot_dash
+    let pink  = with_dash ~style:Solid.pink ~dash:dot_dash
+    let cyan  = with_dash ~style:Solid.cyan ~dash:dot_dash
+
+  end
+
+module MediumDash =
+  struct
+    
+    let red   = with_dash ~style:Solid.red ~dash:medium_dash
+    let green = with_dash ~style:Solid.green ~dash:medium_dash
+    let blue  = with_dash ~style:Solid.blue ~dash:medium_dash
+    let gray  = with_dash ~style:Solid.gray ~dash:medium_dash
+    let black  = with_dash ~style:Solid.black ~dash:medium_dash
+    let pink  = with_dash ~style:Solid.pink ~dash:medium_dash
+    let cyan  = with_dash ~style:Solid.cyan ~dash:medium_dash
+
+  end
+
+module LargeDash =
+  struct
+    
+    let red   = with_dash ~style:Solid.red ~dash:large_dash
+    let green = with_dash ~style:Solid.green ~dash:large_dash
+    let blue  = with_dash ~style:Solid.blue ~dash:large_dash
+    let gray  = with_dash ~style:Solid.gray ~dash:large_dash
+    let black  = with_dash ~style:Solid.black ~dash:large_dash
+    let pink  = with_dash ~style:Solid.pink ~dash:large_dash
+    let cyan  = with_dash ~style:Solid.cyan ~dash:large_dash
+
+  end
