@@ -17,37 +17,37 @@ module C = Commands.Make(Name)
 module B = Backends.Cairo(C)
 
 let empty_box clr width height =
-  let style = Style.make ~stroke:(Style.solid_stroke clr) ~fill:None in
+  let style = Style.make ~stroke:(Style.solid_stroke clr) ~width:None ~fill:None ~dash:None in
   C.style
     ~style
     ~subcommands:[ C.box ~mins:Pt.zero ~maxs:(Pt.pt width height) ]
 
 let filled_box stroke_clr filled_clr width height =
-  let style = Style.make ~stroke:(Style.solid_stroke stroke_clr) ~fill:(Some (Style.solid_stroke filled_clr)) in
+  let style = Style.make ~stroke:(Style.solid_stroke stroke_clr) ~width:None ~fill:(Some (Style.solid_stroke filled_clr)) ~dash:None in
   C.style
     ~style
     ~subcommands:[ C.box ~mins:Pt.zero ~maxs:(Pt.pt width height) ]
 
 let hgradient_box clr1 clr2 width height =
-  let style = Style.make ~stroke:(Style.(solid_stroke black)) ~fill:(Some (Style.simple_horizontal_gradient clr1 clr2)) in
+  let style = Style.make ~stroke:(Style.(solid_stroke black)) ~width:None ~fill:(Some (Style.simple_horizontal_gradient clr1 clr2)) ~dash:None in
   C.style
     ~style
     ~subcommands:[ C.box ~mins:Pt.zero ~maxs:(Pt.pt width height) ]
     
 let vgradient_box clr1 clr2 width height =
-  let style = Style.make ~stroke:(Style.(solid_stroke black)) ~fill:(Some (Style.simple_vertical_gradient clr1 clr2)) in
+  let style = Style.make ~stroke:(Style.(solid_stroke black)) ~width:None ~fill:(Some (Style.simple_vertical_gradient clr1 clr2)) ~dash:None in
   C.style
     ~style
     ~subcommands:[ C.box ~mins:Pt.zero ~maxs:(Pt.pt width height) ]
 
 let vgradient_circle clr1 clr2 radius =
-  let style = Style.make ~stroke:(Style.(solid_stroke black)) ~fill:(Some (Style.simple_vertical_gradient clr1 clr2)) in
+  let style = Style.make ~stroke:(Style.(solid_stroke black)) ~width:None ~fill:(Some (Style.simple_vertical_gradient clr1 clr2)) ~dash:None in
   C.style
     ~style
     ~subcommands:[ C.circle ~center:Pt.zero ~radius ]
 
 let hgradient_circle clr1 clr2 radius =
-  let style = Style.make ~stroke:(Style.(solid_stroke black)) ~fill:(Some (Style.simple_horizontal_gradient clr1 clr2)) in
+  let style = Style.make ~stroke:(Style.(solid_stroke black)) ~width:None ~fill:(Some (Style.simple_horizontal_gradient clr1 clr2)) ~dash:None in
   C.style
     ~style
     ~subcommands:[ C.circle ~center:Pt.zero ~radius ]
@@ -94,24 +94,54 @@ let random_box () =
   | _ ->
      failwith ""
 
+let random_rotation cmd =
+  let radians = Random.float (2.0 *. (acos (~-. 1.0))) in
+  C.rotate ~radians ~subcommands:[cmd]
+
+let random_scaling cmd =
+  let xs = Random.float 2.0 in
+  let ys = xs +. (Random.float 0.5) in
+  C.scale ~xs ~ys ~subcommands:[cmd]
+
+
 let rec random_layout depth =
   if depth = 0 then
-    C.cmd ~name:None [random_box ()]
+    C.cmd [(random_rotation (random_scaling (random_box ())))]
   else
     let l1 = random_layout (depth - 1) in
     let l2 = random_layout (depth - 1) in
     if Random.bool () then
       C.hbox
         ~deltax:10.0
-        ~layout_list:[ l1; l2 ]
+        [ l1; l2 ]
     else
       C.vbox
         ~deltay:10.0
-        ~layout_list:[ l1; l2 ]
+        [ l1; l2 ]
 
 let _ = Random.init 19
+
 let commands = random_layout 7
 
+let commands = 
+  let t = C.ctext ~pos:{ C.pos = Pt.pt 0.0 0.0; relpos = West } ~size:5.0 ~text:"test" in
+  let b = C.box (Pt.pt 0.0 0.0) (Pt.pt 10.0 10.0) in
+  C.cmd [t;b]
+
+let commands = 
+  let pos  = { C.pos = Pt.pt 0.0 0.0; relpos = NorthEast } in
+  let text = C.ctext ~pos ~size:35.0 ~text:"test" in
+  let bbox = C.Bbox.of_command text in
+  let pos  = C.text_position pos (Bbox.width bbox) (Bbox.height bbox) in
+  C.cmd [
+    text;
+    C.box ~mins:(C.Bbox.sw bbox) ~maxs:(C.Bbox.ne bbox);
+    C.circle ~center:Pt.zero ~radius:10.0;
+    C.circle ~center:pos ~radius:5.0;
+    (* C.text  ~pos:{ C.pos = Pt.pt 0.0 50.0; relpos = South } ~width:40.0 ~height:10.0 ~text:"test"; *)
+    C.box ~mins:(Pt.pt (~-. 90.0) (~-. 90.0)) ~maxs:(Pt.pt 90. 90.)
+  ]
+    
                              
 let process_layout xmargin ymargin layout =
   let (cmds, bbox) = C.emit_commands_with_bbox layout in

@@ -79,4 +79,57 @@ val print_color : color -> string
 val print_pattern : pattern -> string
 
 val print : t -> string
-                                                               
+
+(* Predefined styles, for convenience *)
+
+module Solid :
+  sig
+    
+    val red   : t
+    val green : t
+    val blue  : t
+    val gray  : float -> t
+    val black : t
+    val pink  : t
+    val cyan  : t
+    
+  end
+
+module DotDash :
+  sig
+    
+    val red   : t
+    val green : t
+    val blue  : t
+    val gray  : float -> t
+    val black : t
+    val pink  : t
+    val cyan  : t
+    
+  end
+
+module MediumDash :
+  sig
+    
+    val red   : t
+    val green : t
+    val blue  : t
+    val gray  : float -> t
+    val black : t
+    val pink  : t
+    val cyan  : t
+    
+  end
+
+module LargeDash :
+  sig
+    
+    val red   : t
+    val green : t
+    val blue  : t
+    val gray  : float -> t
+    val black : t
+    val pink  : t
+    val cyan  : t
+    
+  end
