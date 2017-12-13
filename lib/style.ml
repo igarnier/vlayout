@@ -19,6 +19,46 @@ let green = { r = 0.0; g = 1.0; b = 0.0 }
 let blue  = { r = 0.0; g = 0.0; b = 1.0 }
 let black = { r = 0.0; g = 0.0; b = 0.0 }
 let white = { r = 1.0; g = 1.0; b = 1.0 }
+let pink  = rgb (255. /. 255.) (105. /. 255.) (180. /. 255.)
+let cyan  = rgb 0.0 (255. /. 255.) (255. /. 255.)
+
+
+let signed_float f =
+  let f = Random.float f in
+  if Random.bool () then
+    f
+  else
+    ~-. f
+
+let clamp f =
+  if f < 0.0 then
+    ~-. f 
+  else if f > 1.0 then
+    1.0 -. f
+  else
+    f
+
+let sample_around { r; g; b } =
+  let rdelta = signed_float 0.5 in
+  let gdelta = signed_float 0.5 in
+  let bdelta = signed_float 0.5 in
+  let r = clamp (r +. rdelta) in
+  let g = clamp (g +. gdelta) in
+  let b = clamp (b +. bdelta) in
+  { r; g; b }
+  
+
+let enum_colors =
+  let colors = [| red; green; blue; black; pink; cyan |] in
+  let len    = Array.length colors in
+  Enum.range 0
+  |> Enum.map (fun i ->
+      if i < len then
+        colors.(i)
+      else
+        sample_around colors.(i mod len)
+    )
+
               
 let gray p =
   if p < 0.0 || p > 1.0 then
@@ -162,14 +202,8 @@ module Solid =
     let blue  = solid blue
     let gray p = solid (gray 0.5)
     let black = solid black
-
-    let pink  = 
-      let c = rgb (255. /. 255.) (105. /. 255.) (180. /. 255.) in
-      solid c
-
-    let cyan  = 
-      let c = rgb 0.0 (255. /. 255.) (255. /. 255.) in
-      solid c
+    let pink  = solid pink
+    let cyan  = solid cyan
 
   end
 

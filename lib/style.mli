@@ -18,6 +18,13 @@ val blue : color
 val black : color
 val white : color
 val gray : float -> color
+val pink : color
+val cyan : color
+
+(** Enumerating colors. The 8 first colors of the enumeration are those above (except white), the one after
+    that are obtained by sampling around the previous ones. *)
+val enum_colors : color Batteries.Enum.t
+
 
 (** Pack an rgb color into the 24 first bits of an int32. *)
 val to_int : color -> int32

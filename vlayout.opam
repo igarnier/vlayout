@@ -13,6 +13,7 @@ depends: [
   "cairo2"
   "dolog"
   "batteries"
+  "gg"
 ]
 available: [ ocaml-version >= "4.04.1" ]
 descr: "

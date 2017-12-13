@@ -15,6 +15,7 @@ module type CommandsSig =
         at its North point (North = mîdpoint of the top side of the box). *)
     type position  = { pos : Pt.t; relpos : relpos }
      and relpos =
+       | Absolute
        | North    
        | West     
        | South    
@@ -79,15 +80,16 @@ module type CommandsSig =
     val box       : mins:Pt.t -> maxs:Pt.t -> t
     (* val text      : pos:position -> width:float -> height:float -> text:string -> t *)
     val text      : pos:position -> size:float -> text:string -> t
-    val style     : style:Style.t -> subcommands:(t list) -> t
+    val style     : style:Style.t -> subcommands:t list -> t
     val segment   : p1:Pt.t -> p2:Pt.t -> t
     val bezier    : p1:Pt.t -> c1:Pt.t -> p2:Pt.t -> c2:Pt.t -> t
     val ubezier   : p1:Pt.t -> p2:Pt.t -> angle:float -> t
     val image     : pos:Pt.t -> image:Image.t -> t
     val declpt    : pt:Pt.t -> name:name -> t
-    val rotate    : radians:float -> subcommands:(t list) -> t
-    val translate : v:Pt.t -> subcommands:(t list) -> t
-    val scale     : xs:float -> ys:float -> subcommands:(t list) -> t
+    val rotate    : radians:float -> subcommands:t list -> t
+    val translate : v:Pt.t -> subcommands:t list -> t
+    val scale     : xs:float -> ys:float -> subcommands:t list -> t
+    val place     : pos:position -> subcommands:t list -> t
 
     val print : t -> string
 

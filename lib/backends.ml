@@ -219,10 +219,6 @@ struct
     | C.Box { mins; maxs } ->
       render_box ctx mins maxs;
       perform_stroke_and_fill_opt ctx fill_opt          
-    (* | C.Text { pos; width; height; text } -> *)
-    (*   if text = "" then () *)
-    (*   else *)
-    (*     display_text ctx pos width height text fill_opt *)
     | C.Text { pos; text } ->
       if text.Ctext.str = "" then ()
       else

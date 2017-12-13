@@ -13,6 +13,7 @@ sig
 
   type position  = { pos : Pt.t; relpos : relpos }
   and relpos =
+    | Absolute
     | North    
     | West     
     | South    
@@ -85,6 +86,7 @@ sig
   val rotate    : radians:float -> subcommands:(t list) -> t
   val translate : v:Pt.t -> subcommands:(t list) -> t
   val scale     : xs:float -> ys:float -> subcommands:(t list) -> t
+  val place     : pos:position -> subcommands:t list -> t
 
   val print : t -> string
 
@@ -129,6 +131,7 @@ module Make(N : Name) =
 
     type position  = { pos : Pt.t; relpos : relpos }
     and relpos =
+      | Absolute
       | North    
       | West     
       | South    
@@ -142,6 +145,7 @@ module Make(N : Name) =
 
     let print_position { pos; relpos } =
       match relpos with
+      | Absolute  -> Printf.sprintf "Absolute(%s)" (Pt.print pos)
       | North     -> Printf.sprintf "North(%s)" (Pt.print pos)
       | West      -> Printf.sprintf "West(%s)" (Pt.print pos)
       | South     -> Printf.sprintf "South(%s)" (Pt.print pos)
@@ -197,9 +201,6 @@ module Make(N : Name) =
 
     let box ~mins ~maxs =
       mktag (Box { mins; maxs })
-
-    (* let text ~pos ~width ~height ~text = *)
-    (*   mktag (Text { pos; width; height; text }) *)
 
     let text ~pos ~size ~text =
       mktag (Text { pos; text = Ctext.create ~size text })
@@ -261,6 +262,7 @@ module Make(N : Name) =
       | Rotate _ | Translate _ | Scale _ ->
         failwith "Commands.anchor_of: unable to compute anchor for linear transformations"
 
+
     let bouquet_of_segments start finish names =
       match names with
       | [] -> 
@@ -286,8 +288,6 @@ module Make(N : Name) =
           sprintf "Circle(%s, %f)" (Pt.print center) radius
         | Box { mins; maxs } ->
           sprintf "Box(%s, %s)" (Pt.print mins) (Pt.print maxs)
-        (* | Text { pos; width; height; text } -> *)
-        (*   sprintf "Text(%s, %f, %f, %s)" (print_position pos) width height text *)
         | Text { pos; text } ->
           sprintf "Text(%s, %s)" (print_position pos) text.Ctext.str
         | Style { style; subcommands } ->
@@ -319,6 +319,7 @@ module Make(N : Name) =
     let base_of_positioned_box h w { pos; relpos } =
       let x = Pt.x pos and y = Pt.y pos in
       match relpos with
+      | Absolute -> pos
       (* x = base_x + w / 2, y = base_y + h *)              
       | North -> Pt.pt (x -. w *. 0.5) (y -. h)
       (* x = base_x, y = base_y + h / 2 *)                                      
@@ -337,8 +338,6 @@ module Make(N : Name) =
       | NorthEast -> Pt.pt (x -. w) (y -. h)
 
     let text_position pos width height =
-      (* let max_h = size in *)
-      (* let max_w = (\* max_h *. *\) 5. *. (float (String.length text)) in (\* TODO: this is the ugliest hack *\) *)
       base_of_positioned_box height width pos
 
     module Bbox =
@@ -353,11 +352,6 @@ module Make(N : Name) =
           box (Pt.pt (x -. radius) (y -. radius)) (Pt.pt (x +. radius) (y +. radius))
         | Box { mins; maxs } ->
           box mins maxs
-        (* | Text { pos; width; height; text } ->           *)
-        (*   (\* let max_h = size in *\) *)
-        (*   (\* let max_w = max_h *. (float (String.length text)) in *\) *)
-        (*   let base  = text_position pos width height in *)
-        (*   box base Pt.(base + (pt width height)) *)
         | Text { pos; text } -> 
           let width  = Bbox.width text.Ctext.box in
           let height = Bbox.height text.Ctext.box in
@@ -413,7 +407,6 @@ module Make(N : Name) =
         match cmd.desc with
         | Circle _
         | Box _
-        (* | Text _ *)
         | Text _
         | Style _
         | Segment _
@@ -580,8 +573,14 @@ module Make(N : Name) =
 
     end
 
-
     (* Box autolayout *)
+    let place ~pos ~subcommands =
+      let bbox   = Bbox.of_commands subcommands in
+      let width  = Bbox.width bbox in
+      let height = Bbox.height bbox in
+      let base   = base_of_positioned_box height width pos in
+      let v      = Pt.(base - (Bbox.sw bbox)) in
+      translate ~v ~subcommands
 
     type hposition = 
       [ `Hcentered
@@ -713,32 +712,12 @@ module Make(N : Name) =
       | Arrow { layout } ->
         1 + (depth layout)
 
-    (* let fibers_from_list = *)
-    (*   let rec insert a b fibers = *)
-    (*     match fibers with *)
-    (*     | [] -> *)
-    (*       [(b, [a])] *)
-    (*     | ((b', l) as b'_fiber) :: tl -> *)
-    (*       if b = b' then *)
-    (*         (b', a :: l) :: tl *)
-    (*       else *)
-    (*         b'_fiber :: (insert a b tl) *)
-    (*   in *)
-    (*   let rec loop l acc = *)
-    (*     match l with *)
-    (*     | [] -> acc *)
-    (*     | c :: tl -> *)
-    (*       loop tl (insert c c.tag acc) *)
-    (*   in *)
-    (*   fun l -> loop l [] *)
-
-
     exception Emit_error
 
     (* This function performs the layout. It produces:
-     * . a list of named commands ((t * int option) list) where the name
-     *   corresponds to the named_command they belong to
-     * . a bounding box for the list of commands (Bbox.t)
+      . a list of named commands ((t * int option) list) where the name
+        corresponds to the named_command they belong to
+     . a bounding box for the list of commands (Bbox.t)
     *)
     let rec emit_commands_with_bbox (l : layout) : ((t list) * Bbox.t) =
       match l with
