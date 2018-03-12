@@ -4,7 +4,7 @@ authors: ["Ilias Garnier"]
 homepage: "https://github.com/igarnier/vlayout"
 bug-reports: "https://github.com/igarnier/vlayout/issues"
 dev-repo: "git+https://github.com/igarnier/vlayout.git"
-license: "Apache-2.0"
+license: "MIT"
 build: [
   ["jbuilder" "build" "-p" name "-j" jobs]
 ]
