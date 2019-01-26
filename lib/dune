@@ -1,0 +1,4 @@
+(library
+ (name        vlayout)
+ (public_name vlayout)
+ (libraries dolog cairo2 batteries gg))

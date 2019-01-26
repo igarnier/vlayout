@@ -52,7 +52,7 @@ let segment_intersection (p1, p2) (p3, p4) =
       else
         Some(plus p3 (pt (k2 *. u2x) (k2 *. u2y)))
 
-let point_in_box = Gg.Box2.mem
+(* let point_in_box = Gg.Box2.mem *)
 
 
 (*  C -- N -- D
@@ -73,7 +73,7 @@ let corners_list bbox =
     [sw bbox; ne bbox; nw bbox; se bbox]
   )
 
-type orient = UpLeft | UpRight | DownLeft | DownRight     
+type orient = UpLeft | UpRight | DownLeft | DownRight
 
 let orient_of_segment (p1, p2) =
   let p1x = Pt.x p1 and p1y = Pt.y p1 in
@@ -91,7 +91,7 @@ let orient_of_segment (p1, p2) =
   else
     UpLeft
 
-(* result of an intersection *)      
+(* result of an intersection *)
 type result =
     NW | NE | SW | SE | WE | NS
 
@@ -126,7 +126,7 @@ let intersect_box box seg =
     None (* failwith "SmartPath.intersect_box: error case; planar segment? lack of luck?" *)
 
 let min_dist p lp =
-  List.fold_left (fun min_dist point -> min min_dist (dist point p)) max_float lp 
+  List.fold_left (fun min_dist point -> min min_dist (dist point p)) max_float lp
 
 let sort_boxes_by_dist origin boxes =
   List.sort
@@ -175,7 +175,7 @@ let solution shift box pb orient =
      | DownRight -> (n', d_sol, e')
      | UpLeft -> (e', d_sol, n')
      | _ -> failwith "orientation error : NE")
-  | (NS, n, s) ->
+  | (NS, _n, _s) ->
     (* let n' = north_sol n in
        let s' = south_sol s in*)
     (* This heuristic might not be very adapted in general *)
@@ -185,7 +185,7 @@ let solution shift box pb orient =
        (b_sol, barycenter b_sol d_sol, d_sol)
      | _ ->
        (c_sol, barycenter c_sol a_sol, a_sol))
-  | (WE, w, e) ->
+  | (WE, _w, _e) ->
     (* let w' = west_sol w in
        let e' = east_sol e in *)
     (match orient with
@@ -202,7 +202,7 @@ let rec solve shift ((origin, target) as segment) boxes =
   | box :: tl ->
     let problem = intersect_box box segment in
     match problem with
-    | None -> 
+    | None ->
       solve shift segment tl
     | Some pb ->
       let (p1, p2, new_origin) = solution shift box pb (orient_of_segment segment) in

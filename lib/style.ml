@@ -6,9 +6,9 @@ open Batteries
 *)
 type color = { r : float; g : float; b : float }
 
-let r { r } = r
-let g { g } = g
-let b { b } = b
+let r { r ; _ } = r
+let g { g ; _ } = g
+let b { b ; _ } = b
 
 (** Make an rgb color. *)
 let rgb r g b = { r; g; b }
@@ -32,7 +32,7 @@ let signed_float f =
 
 let clamp f =
   if f < 0.0 then
-    ~-. f 
+    ~-. f
   else if f > 1.0 then
     1.0 -. f
   else
@@ -46,7 +46,7 @@ let sample_around { r; g; b } =
   let g = clamp (g +. gdelta) in
   let b = clamp (b +. bdelta) in
   { r; g; b }
-  
+
 
 let enum_colors =
   let colors = [| red; green; blue; black; pink; cyan |] in
@@ -59,7 +59,7 @@ let enum_colors =
         sample_around colors.(i mod len)
     )
 
-              
+
 let gray p =
   if p < 0.0 || p > 1.0 then
     invalid_arg "gray percentage must be in [0,1]"
@@ -72,17 +72,17 @@ let to_int { r; g; b } =
   let g = of_float (g *. 255.0) in
   let b = of_float (b *. 255.0) in
   logor (logor (shift_left r 16) (shift_left g 8)) b
-      
-                  
+
+
 (** A path in color space where each color is weighted by a value in [0,1].
     As an example, [ (red, 0.0); (blue, 0.5); (red, 1.0) ] corresponds to
     a path that starts and finishes by red, going halfway through by blue.
     The intermediate values taken by the path depend on the kind of gradient
     algorithm used.
- *)               
+*)
 type color_stops = (color * float) list
 
-(** A [pattern] describes how to paint a (potentially 1d) surface. *)                                   
+(** A [pattern] describes how to paint a (potentially 1d) surface. *)
 type pattern =
   | Solid of  { c : color }
   | Linear of { p0 : Pt.t; p1 : Pt.t; stops : color_stops }
@@ -97,7 +97,7 @@ type dash_pattern = float array
     of the stroke,
     while the optional [fill] field describes how the enclosed surface
     must be drawn.
- *)
+*)
 type t =
   {
     stroke : pattern;
@@ -113,19 +113,19 @@ let print_color { r; g; b } =
 (** String description of a pattern. *)
 let print_pattern = function
   | Solid { c } ->
-     Printf.sprintf "Solid %s" (print_color c)
+    Printf.sprintf "Solid %s" (print_color c)
   | Linear { p0; p1; stops } ->
-     let p0_s = Pt.print p0
-     and p1_s = Pt.print p1
-     and st_s = Tools.to_sseq (fun (c,ofs) -> Printf.sprintf "%s at %f" (print_color c) ofs) "," stops
-     in
-     Printf.sprintf "Linear { p0 = %s; p1 = %s; stops = %s }" p0_s p1_s st_s
+    let p0_s = Pt.print p0
+    and p1_s = Pt.print p1
+    and st_s = Tools.to_sseq (fun (c,ofs) -> Printf.sprintf "%s at %f" (print_color c) ofs) "," stops
+    in
+    Printf.sprintf "Linear { p0 = %s; p1 = %s; stops = %s }" p0_s p1_s st_s
   | Radial { c0; r0; c1; r1; stops } ->
-     let c0_s = Pt.print c0
-     and c1_s = Pt.print c1
-     and st_s = Tools.to_sseq (fun (c,ofs) -> Printf.sprintf "%s at %f" (print_color c) ofs) "," stops
-     in
-     Printf.sprintf "Radial { c0 = %s; r0 = %f; c1 = %s; r1 = %f; stops = %s }" c0_s r0 c1_s r1 st_s
+    let c0_s = Pt.print c0
+    and c1_s = Pt.print c1
+    and st_s = Tools.to_sseq (fun (c,ofs) -> Printf.sprintf "%s at %f" (print_color c) ofs) "," stops
+    in
+    Printf.sprintf "Radial { c0 = %s; r0 = %f; c1 = %s; r1 = %f; stops = %s }" c0_s r0 c1_s r1 st_s
 
 let print_dash_pattern dash_pattern =
   let patt = Array.to_list dash_pattern in
@@ -133,25 +133,25 @@ let print_dash_pattern dash_pattern =
   Printf.sprintf "Dash %s" s
 
 
-(** String description of a style. *)                    
-let print { stroke; dash; fill } =
+(** String description of a style. *)
+let print { stroke; dash; fill; _ } =
   let stroke_s = print_pattern stroke in
   let dash_s =
     match dash with
     | None -> "None"
     | Some patt ->
-       print_dash_pattern patt
-  in   
+      print_dash_pattern patt
+  in
   let fill_s =
     match fill with
     | None -> "None"
     | Some patt ->
-       print_pattern patt
+      print_pattern patt
   in
   Printf.sprintf "{ stroke = %s; dash = %s; fill = %s }" stroke_s dash_s fill_s
 
 
-              
+
 (** Make a style from a stroke and a fill. *)
 let make ~stroke ~width ~dash ~fill = { stroke; width; dash; fill }
 
@@ -179,7 +179,7 @@ let horizontal_gradient ~path =
   let p0 = Pt.pt 0.0 0.0 in
   let p1 = Pt.pt 1.0 0.0 in
   Linear { p0; p1; stops = path }
-                            
+
 let simple_vertical_gradient ~clr1 ~clr2 =
   let p0 = Pt.pt 0.0 0.0 in
   let p1 = Pt.pt 0.0 1.0 in
@@ -195,53 +195,53 @@ let simple_horizontal_gradient ~clr1 ~clr2 =
 let solid clr = make ~stroke:(Solid { c = clr }) ~width:None ~fill:None ~dash:None
 
 module Solid =
-  struct
-    
-    let red   = solid red 
-    let green = solid green
-    let blue  = solid blue
-    let gray p = solid (gray 0.5)
-    let black = solid black
-    let pink  = solid pink
-    let cyan  = solid cyan
+struct
 
-  end
+  let red   = solid red
+  let green = solid green
+  let blue  = solid blue
+  let gray p = solid (gray p)
+  let black = solid black
+  let pink  = solid pink
+  let cyan  = solid cyan
+
+end
 
 module DotDash =
-  struct
-    
-    let red   = with_dash ~style:Solid.red ~dash:dot_dash
-    let green = with_dash ~style:Solid.green ~dash:dot_dash
-    let blue  = with_dash ~style:Solid.blue ~dash:dot_dash
-    let gray p  = with_dash ~style:(Solid.gray p) ~dash:dot_dash
-    let black  = with_dash ~style:Solid.black ~dash:dot_dash
-    let pink  = with_dash ~style:Solid.pink ~dash:dot_dash
-    let cyan  = with_dash ~style:Solid.cyan ~dash:dot_dash
+struct
 
-  end
+  let red   = with_dash ~style:Solid.red ~dash:dot_dash
+  let green = with_dash ~style:Solid.green ~dash:dot_dash
+  let blue  = with_dash ~style:Solid.blue ~dash:dot_dash
+  let gray p  = with_dash ~style:(Solid.gray p) ~dash:dot_dash
+  let black  = with_dash ~style:Solid.black ~dash:dot_dash
+  let pink  = with_dash ~style:Solid.pink ~dash:dot_dash
+  let cyan  = with_dash ~style:Solid.cyan ~dash:dot_dash
+
+end
 
 module MediumDash =
-  struct
-    
-    let red   = with_dash ~style:Solid.red ~dash:medium_dash
-    let green = with_dash ~style:Solid.green ~dash:medium_dash
-    let blue  = with_dash ~style:Solid.blue ~dash:medium_dash
-    let gray p  = with_dash ~style:(Solid.gray p) ~dash:medium_dash
-    let black  = with_dash ~style:Solid.black ~dash:medium_dash
-    let pink  = with_dash ~style:Solid.pink ~dash:medium_dash
-    let cyan  = with_dash ~style:Solid.cyan ~dash:medium_dash
+struct
 
-  end
+  let red   = with_dash ~style:Solid.red ~dash:medium_dash
+  let green = with_dash ~style:Solid.green ~dash:medium_dash
+  let blue  = with_dash ~style:Solid.blue ~dash:medium_dash
+  let gray p  = with_dash ~style:(Solid.gray p) ~dash:medium_dash
+  let black  = with_dash ~style:Solid.black ~dash:medium_dash
+  let pink  = with_dash ~style:Solid.pink ~dash:medium_dash
+  let cyan  = with_dash ~style:Solid.cyan ~dash:medium_dash
+
+end
 
 module LargeDash =
-  struct
-    
-    let red   = with_dash ~style:Solid.red ~dash:large_dash
-    let green = with_dash ~style:Solid.green ~dash:large_dash
-    let blue  = with_dash ~style:Solid.blue ~dash:large_dash
-    let gray p = with_dash ~style:(Solid.gray p) ~dash:large_dash
-    let black  = with_dash ~style:Solid.black ~dash:large_dash
-    let pink  = with_dash ~style:Solid.pink ~dash:large_dash
-    let cyan  = with_dash ~style:Solid.cyan ~dash:large_dash
+struct
 
-  end
+  let red   = with_dash ~style:Solid.red ~dash:large_dash
+  let green = with_dash ~style:Solid.green ~dash:large_dash
+  let blue  = with_dash ~style:Solid.blue ~dash:large_dash
+  let gray p = with_dash ~style:(Solid.gray p) ~dash:large_dash
+  let black  = with_dash ~style:Solid.black ~dash:large_dash
+  let pink  = with_dash ~style:Solid.pink ~dash:large_dash
+  let cyan  = with_dash ~style:Solid.cyan ~dash:large_dash
+
+end

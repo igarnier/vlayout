@@ -3,7 +3,7 @@ open Gg
 type t = p2
 
 let zero = P2.o
-           
+
 let pt = P2.v
 
 let x = V2.x
@@ -25,14 +25,14 @@ let norm = V2.norm
 let barycenter p1 p2 = V2.mix p1 p2 0.5
 
 let dot = V2.dot
-                           
+
 let normalize = V2.unit
 
 let print v = Printf.sprintf "(%f, %f)" (V2.x v) (V2.y v)
-                                       
+
 let angle_of_vec (p1, p2) =
   let n = normalize (minus p2 p1) in
-  if V2.y n < 0.0 then 
+  if V2.y n < 0.0 then
     ~-. (acos (V2.x n))
   else
     acos (V2.x n)

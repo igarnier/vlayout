@@ -2,52 +2,71 @@ open Vlayout
 
 (* We won't be using names for this example. *)
 module Name =
-  struct
+struct
 
-    type t = ()
+  type t = ()
 
-    let compare _ _ = 0
+  let compare _ _ = 0
 
-    let print _ = "()"
-    
-  end
+  let print _ = "()"
+
+end
 
 module C = Commands.Make(Name)
 
 module B = Backends.Cairo(C)
 
 let empty_box clr width height =
-  let style = Style.make ~stroke:(Style.solid_stroke clr) ~width:None ~fill:None ~dash:None in
+  let style = Style.make ~stroke:(Style.solid_stroke ~clr) ~width:None ~fill:None ~dash:None in
   C.style
     ~style
     ~subcommands:[ C.box ~mins:Pt.zero ~maxs:(Pt.pt width height) ]
 
 let filled_box stroke_clr filled_clr width height =
-  let style = Style.make ~stroke:(Style.solid_stroke stroke_clr) ~width:None ~fill:(Some (Style.solid_stroke filled_clr)) ~dash:None in
+  let style = Style.make
+      ~stroke:(Style.solid_stroke ~clr:stroke_clr)
+      ~width:None
+      ~fill:(Some (Style.solid_stroke ~clr:filled_clr)) ~dash:None in
   C.style
     ~style
     ~subcommands:[ C.box ~mins:Pt.zero ~maxs:(Pt.pt width height) ]
 
 let hgradient_box clr1 clr2 width height =
-  let style = Style.make ~stroke:(Style.(solid_stroke black)) ~width:None ~fill:(Some (Style.simple_horizontal_gradient clr1 clr2)) ~dash:None in
+  let style = Style.make
+      ~stroke:(Style.(solid_stroke ~clr:black))
+      ~width:None
+      ~fill:(Some (Style.simple_horizontal_gradient ~clr1 ~clr2))
+      ~dash:None in
   C.style
     ~style
     ~subcommands:[ C.box ~mins:Pt.zero ~maxs:(Pt.pt width height) ]
-    
+
 let vgradient_box clr1 clr2 width height =
-  let style = Style.make ~stroke:(Style.(solid_stroke black)) ~width:None ~fill:(Some (Style.simple_vertical_gradient clr1 clr2)) ~dash:None in
+  let style = Style.make
+      ~stroke:(Style.(solid_stroke ~clr:black))
+      ~width:None
+      ~fill:(Some (Style.simple_vertical_gradient ~clr1 ~clr2))
+      ~dash:None in
   C.style
     ~style
     ~subcommands:[ C.box ~mins:Pt.zero ~maxs:(Pt.pt width height) ]
 
 let vgradient_circle clr1 clr2 radius =
-  let style = Style.make ~stroke:(Style.(solid_stroke black)) ~width:None ~fill:(Some (Style.simple_vertical_gradient clr1 clr2)) ~dash:None in
+  let style = Style.make
+      ~stroke:(Style.(solid_stroke ~clr:black))
+      ~width:None
+      ~fill:(Some (Style.simple_vertical_gradient ~clr1 ~clr2))
+      ~dash:None in
   C.style
     ~style
     ~subcommands:[ C.circle ~center:Pt.zero ~radius ]
 
 let hgradient_circle clr1 clr2 radius =
-  let style = Style.make ~stroke:(Style.(solid_stroke black)) ~width:None ~fill:(Some (Style.simple_horizontal_gradient clr1 clr2)) ~dash:None in
+  let style = Style.make
+      ~stroke:(Style.(solid_stroke ~clr:black))
+      ~width:None
+      ~fill:(Some (Style.simple_horizontal_gradient ~clr1 ~clr2))
+      ~dash:None in
   C.style
     ~style
     ~subcommands:[ C.circle ~center:Pt.zero ~radius ]
@@ -69,30 +88,30 @@ let random_box_size () =
   let w = 30.0 +. (random_float ()) in
   let h = 30.0 +. (random_float ()) in
   (w, h)
-    
+
 let random_box () =
   let i = Random.int 6 in
   match i with
   | 0 ->
-     let w, h = random_box_size () in
-     empty_box (random_color ()) w h
+    let w, h = random_box_size () in
+    empty_box (random_color ()) w h
   | 1 ->
-     let w, h = random_box_size () in
-     filled_box (random_color ()) (random_color ()) w h
+    let w, h = random_box_size () in
+    filled_box (random_color ()) (random_color ()) w h
   | 2 ->
-     let w, h = random_box_size () in
-     hgradient_box (random_color ()) (random_color ()) w h
+    let w, h = random_box_size () in
+    hgradient_box (random_color ()) (random_color ()) w h
   | 3 ->
-     let w, h = random_box_size () in
-     vgradient_box (random_color ()) (random_color ()) w h
+    let w, h = random_box_size () in
+    vgradient_box (random_color ()) (random_color ()) w h
   | 4 ->
-     let radius = 2.0 *. (random_float ()) in
-     vgradient_circle (random_color ()) (random_color ()) radius
+    let radius = 2.0 *. (random_float ()) in
+    vgradient_circle (random_color ()) (random_color ()) radius
   | 5 ->
-     let radius = 2.0 *. (random_float ()) in
-     hgradient_circle (random_color ()) (random_color ()) radius
+    let radius = 2.0 *. (random_float ()) in
+    hgradient_circle (random_color ()) (random_color ()) radius
   | _ ->
-     failwith ""
+    failwith ""
 
 let random_rotation cmd =
   let radians = Random.float (2.0 *. (acos (~-. 1.0))) in
@@ -123,14 +142,14 @@ let _ = Random.init 19
 
 let commands = random_layout 7
 
-let commands = 
-  let t = C.ctext ~pos:{ C.pos = Pt.pt 0.0 0.0; relpos = West } ~size:5.0 ~text:"test" in
-  let b = C.box (Pt.pt 0.0 0.0) (Pt.pt 10.0 10.0) in
+let _commands =
+  let t = C.text ~pos:{ C.pos = Pt.pt 0.0 0.0; relpos = West } ~size:5.0 ~text:"test" in
+  let b = C.box ~mins:(Pt.pt 0.0 0.0) ~maxs:(Pt.pt 10.0 10.0) in
   C.cmd [t;b]
 
-let commands = 
+let _commands =
   let pos  = { C.pos = Pt.pt 0.0 0.0; relpos = NorthEast } in
-  let text = C.ctext ~pos ~size:35.0 ~text:"test" in
+  let text = C.text ~pos ~size:35.0 ~text:"test" in
   let bbox = C.Bbox.of_command text in
   let pos  = C.text_position pos (Bbox.width bbox) (Bbox.height bbox) in
   C.cmd [
@@ -141,8 +160,8 @@ let commands =
     (* C.text  ~pos:{ C.pos = Pt.pt 0.0 50.0; relpos = South } ~width:40.0 ~height:10.0 ~text:"test"; *)
     C.box ~mins:(Pt.pt (~-. 90.0) (~-. 90.0)) ~maxs:(Pt.pt 90. 90.)
   ]
-    
-                             
+
+
 let process_layout xmargin ymargin layout =
   let (cmds, bbox) = C.emit_commands_with_bbox layout in
   let w    = xmargin +. (Bbox.width bbox)
@@ -151,16 +170,16 @@ let process_layout xmargin ymargin layout =
 
 let display_pdf filename layout =
   let layout, w, h  = process_layout 10.0 10.0 layout in (* TODO: make margins a parameter *)
-  let cairo_surface = Cairo.PDF.create ~fname:filename ~width:w ~height:h in  
+  let cairo_surface = Cairo.PDF.create ~fname:filename ~width:w ~height:h in
   let ctx           = Cairo.create cairo_surface in
   let _ =
     Cairo.set_matrix
       ctx
       Cairo.({
-                xx = 1.0 ; yx = 0.0 ;
-                xy = 0.0 ; yy = ~-. 1.0 ;
-                x0 = 0.0 ; y0 = h
-    });
+          xx = 1.0 ; yx = 0.0 ;
+          xy = 0.0 ; yy = ~-. 1.0 ;
+          x0 = 0.0 ; y0 = h
+        });
     Cairo.set_line_width ctx 1.0;
     Cairo.select_font_face
       ctx
@@ -174,4 +193,3 @@ let display_pdf filename layout =
 
 let _ =
   display_pdf "mondrian.pdf" commands
-                        

@@ -1,7 +1,7 @@
 module Cairo :
-functor (C : Commands.CommandsSig) ->
-sig
+  functor (C : Commands.CommandsSig) ->
+  sig
 
-  val render : Cairo.context -> C.t -> unit
-  
-end
+    val render : Cairo.context -> C.t -> unit
+
+  end

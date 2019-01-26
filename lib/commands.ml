@@ -14,10 +14,10 @@ sig
   type position  = { pos : Pt.t; relpos : relpos }
   and relpos =
     | Absolute
-    | North    
-    | West     
-    | South    
-    | East     
+    | North
+    | West
+    | South
+    | East
     | SouthWest
     | SouthEast
     | NorthWest
@@ -47,11 +47,11 @@ sig
   val text_position : position -> float -> float -> Pt.t
 
   module Bbox :
-    sig
-      include Bbox.S
-      val of_command :  alias -> t
-      val of_commands : alias list -> t
-    end
+  sig
+    include Bbox.S
+    val of_command :  alias -> t
+    val of_commands : alias list -> t
+  end
 
   module Arrow :
   sig
@@ -96,13 +96,13 @@ sig
 
   val collect_declared_points : t list -> Pt.t NameMap.t
 
-  type hposition = 
+  type hposition =
     [ `Hcentered
     | `Bottom
     | `Top
     ]
 
-  type vposition = 
+  type vposition =
     [ `Vcentered
     | `Left
     | `Right
@@ -132,16 +132,16 @@ module Make(N : Name) =
     type position  = { pos : Pt.t; relpos : relpos }
     and relpos =
       | Absolute
-      | North    
-      | West     
-      | South    
-      | East     
+      | North
+      | West
+      | South
+      | East
       | SouthWest
       | SouthEast
       | NorthWest
       | NorthEast
 
-    let point_of_position { pos } = pos
+    let point_of_position { pos ; _ } = pos
 
     let print_position { pos; relpos } =
       match relpos with
@@ -215,7 +215,7 @@ module Make(N : Name) =
       mktag (Bezier { p1; c1; p2; c2 })
 
     let ubezier ~p1 ~p2 ~angle =
-      let (c1, c2) = ubezier_control_points p1 p2 angle in
+      let (c1, c2) = ubezier_control_points ~p1 ~p2 ~angle in
       bezier ~p1:p1 ~c1:c1 ~p2:p2 ~c2:c2
 
     let image ~pos ~image =
@@ -249,36 +249,36 @@ module Make(N : Name) =
 
     let anchor_of c =
       match c.desc with
-      | Circle { center }  -> center
+      | Circle { center ; _ }  -> center
       | Box { mins; maxs } -> mid mins maxs
       (* | Text { pos } -> point_of_position pos *)
-      | Text { pos } -> point_of_position pos
+      | Text { pos ; _ } -> point_of_position pos
       | Segment { p1; p2 } -> mid p1 p2
       | Bezier { p1; c1; p2; c2 } ->
         bezier_midpoint p1 c1 p2 c2
-      | Image { pos }      ->  pos
+      | Image { pos ; _ }      ->  pos
       | DeclPt _ | Style _ ->
         failwith "Commands.anchor_of: DeclPt and Style have no anchor"
       | Rotate _ | Translate _ | Scale _ ->
         failwith "Commands.anchor_of: unable to compute anchor for linear transformations"
 
 
-    let bouquet_of_segments start finish names =
+    let _bouquet_of_segments start finish names =
       match names with
-      | [] -> 
+      | [] ->
         failwith "Commands.bouquet_of_segments: empty list of names"
       | name :: [] ->
-        let edge = segment start finish in
-        edge :: (declpt (anchor_of edge) name) :: []
-      | _ -> 
+        let edge = segment ~p1:start ~p2:finish in
+        edge :: (declpt ~pt:(anchor_of edge) ~name) :: []
+      | _ ->
         let len    = List.length names in
         let pi4    = Tools.pi *. 0.25 in
         let angles = Tools.interpolate (~-. pi4) pi4 (len - 1) in
         let l      = List.combine names angles in
         List.fold_left
           (fun acc (name, angle) ->
-             let edge = ubezier start finish angle in
-             (declpt (anchor_of edge) name) :: edge :: acc
+             let edge = ubezier ~p1:start ~p2:finish ~angle in
+             (declpt ~pt:(anchor_of edge) ~name) :: edge :: acc
           ) [] l
 
     let rec print c =
@@ -291,7 +291,7 @@ module Make(N : Name) =
         | Text { pos; text } ->
           sprintf "Text(%s, %s)" (print_position pos) text.Ctext.str
         | Style { style; subcommands } ->
-          let s    = Tools.to_sseq print "; " subcommands in          
+          let s    = Tools.to_sseq print "; " subcommands in
           sprintf "Style(%s, %s)" (Style.print style) s
         | Segment { p1; p2 } ->
           sprintf "Segment(%s, %s)" (Pt.print p1) (Pt.print p2)
@@ -313,16 +313,16 @@ module Make(N : Name) =
         | Scale { xs; ys; subcommands } ->
           let s    = Tools.to_sseq print "; " subcommands in
           sprintf "Scale(%f, %f, %s)" xs ys s
-      )         
+      )
 
 
     let base_of_positioned_box h w { pos; relpos } =
       let x = Pt.x pos and y = Pt.y pos in
       match relpos with
       | Absolute -> pos
-      (* x = base_x + w / 2, y = base_y + h *)              
+      (* x = base_x + w / 2, y = base_y + h *)
       | North -> Pt.pt (x -. w *. 0.5) (y -. h)
-      (* x = base_x, y = base_y + h / 2 *)                                      
+      (* x = base_x, y = base_y + h / 2 *)
       | West  -> Pt.pt x (y -. h *. 0.5)
       (* x = base_x + w /2, y = base_y *)
       | South -> Pt.pt (x -. w *. 0.5) y
@@ -352,7 +352,7 @@ module Make(N : Name) =
           box (Pt.pt (x -. radius) (y -. radius)) (Pt.pt (x +. radius) (y +. radius))
         | Box { mins; maxs } ->
           box mins maxs
-        | Text { pos; text } -> 
+        | Text { pos; text } ->
           let width  = Bbox.width text.Ctext.box in
           let height = Bbox.height text.Ctext.box in
           let base   = text_position pos width height in
@@ -367,9 +367,9 @@ module Make(N : Name) =
           join (box p1 c1) (box p2 c2)
         | Image { pos; image } ->
           Bbox.translate pos (Image.bbox image)
-        | Style { subcommands } ->
+        | Style { subcommands ; _ } ->
           of_commands subcommands
-        | DeclPt { pt } -> box pt pt
+        | DeclPt { pt ; _ } -> box pt pt
         | Rotate { radians; subcommands } ->
           let bbox = of_commands subcommands in
           rotate radians bbox
@@ -471,7 +471,7 @@ module Make(N : Name) =
 
       (* let mkarrow legs_length legs_angle start finish = *)
       let mkarrow ~style ~start ~finish =
-        let (left_leg, right_leg) = mkarrowhead style.legs style.angle in
+        let (left_leg, right_leg) = mkarrowhead ~legs_length:style.legs ~legs_angle:style.angle in
         let vec                   = Pt.minus finish start in
         let vec_angle             = Pt.angle_of_vec (start, finish) in
         let shaft_start           = Pt.plus start (Pt.scale vec style.startp) in
@@ -480,9 +480,9 @@ module Make(N : Name) =
         let left_leg              = Pt.plus arrow_pos (Pt.rotate_vector vec_angle left_leg) in
         let right_leg             = Pt.plus arrow_pos (Pt.rotate_vector vec_angle right_leg) in
         [
-          segment shaft_start shaft_finish;
-          segment arrow_pos left_leg;
-          segment arrow_pos right_leg
+          segment ~p1:shaft_start ~p2:shaft_finish;
+          segment ~p1:arrow_pos ~p2:left_leg;
+          segment ~p1:arrow_pos ~p2:right_leg
         ]
 
       (* let mkarrow legs_length legs_angle start finish = *)
@@ -490,12 +490,12 @@ module Make(N : Name) =
         if not (List.mem style.arrowp [0.0; 0.5; 1.0]) then
           failwith "Commands.mkarrow_curvy: arrowp must be either 0, 0.5 or 1"
         else
-          let (left_leg, right_leg) = mkarrowhead style.legs style.angle in
+          let (left_leg, right_leg) = mkarrowhead ~legs_length:style.legs ~legs_angle:style.angle in
           let vec                   = Pt.minus finish start in
           let vec_angle             = Pt.angle_of_vec (start, finish) in
           let shaft_start           = Pt.plus start (Pt.scale vec style.startp) in
           let shaft_finish          = Pt.plus start (Pt.scale vec style.endp) in
-          let (c1, c2)              = ubezier_control_points shaft_start shaft_finish angle in
+          let (c1, c2)              = ubezier_control_points ~p1:shaft_start ~p2:shaft_finish ~angle in
           let arrow_pos, rot_angle  =
             if style.arrowp = 0.0 then
               (shaft_start, vec_angle +. angle)
@@ -508,9 +508,9 @@ module Make(N : Name) =
           let left_leg  = Pt.plus arrow_pos (Pt.rotate_vector rot_angle left_leg) in
           let right_leg = Pt.plus arrow_pos (Pt.rotate_vector rot_angle right_leg) in
           [
-            bezier shaft_start c1 shaft_finish c2;
-            segment arrow_pos left_leg;
-            segment arrow_pos right_leg
+            bezier ~p1:shaft_start ~c1 ~p2:shaft_finish ~c2;
+            segment ~p1:arrow_pos ~p2:left_leg;
+            segment ~p1:arrow_pos ~p2:right_leg
           ]
 
       (* multi-segments arrows *)
@@ -536,7 +536,7 @@ module Make(N : Name) =
         | [] -> failwith "Commands.Arrow.mk_multisegment_arrow: not enough points"
         | (pn, pn') :: lt ->
           let start = pn and finish = pn' in
-          let (left_leg, right_leg) = mkarrowhead style.legs style.angle in
+          let (left_leg, right_leg) = mkarrowhead ~legs_length:style.legs ~legs_angle:style.angle in
           let vec                   = Pt.minus finish start in
           let vec_angle             = Pt.angle_of_vec (start, finish) in
           let shaft_finish          = Pt.plus start (Pt.scale vec style.endp) in
@@ -545,12 +545,12 @@ module Make(N : Name) =
           let right_leg             = Pt.plus arrow_pos (Pt.rotate_vector vec_angle right_leg) in
           let arrow =
             [
-              segment pn shaft_finish;
-              segment arrow_pos left_leg;
-              segment arrow_pos right_leg
+              segment ~p1:pn ~p2:shaft_finish;
+              segment ~p1:arrow_pos ~p2:left_leg;
+              segment ~p1:arrow_pos ~p2:right_leg
             ]
           in
-          let segments = List.map (fun (p1, p2) -> segment p1 p2) lt in
+          let segments = List.map (fun (p1, p2) -> segment ~p1 ~p2) lt in
           segments @ arrow
 
       let default_style =
@@ -582,13 +582,13 @@ module Make(N : Name) =
       let v      = Pt.(base - (Bbox.sw bbox)) in
       translate ~v ~subcommands
 
-    type hposition = 
+    type hposition =
       [ `Hcentered
       | `Bottom
       | `Top
       ]
 
-    type vposition = 
+    type vposition =
       [ `Vcentered
       | `Left
       | `Right
@@ -626,10 +626,10 @@ module Make(N : Name) =
 
 
     (* Layout algorithm *)
-        
+
     (* horizontal alignement functions *)
-    
-    (* given box1, compute displacement vector for box2 to 
+
+    (* given box1, compute displacement vector for box2 to
      * be aligned the right of box1, in a centered way. *)
     let align_horiz_centered_vector deltax box1 box2 =
       let h1 = Bbox.height box1
@@ -637,12 +637,12 @@ module Make(N : Name) =
       let deltay = (h1 -. h2) *. 0.5 in
       Pt.((Bbox.se box1) - (Bbox.sw box2) + (Pt.pt deltax deltay))
 
-    (* given box1, compute displacement vector for box2 to 
+    (* given box1, compute displacement vector for box2 to
      * be aligned the right of box1, so that their bottoms sit on the same line. *)
     let align_horiz_bottom_vector deltax box1 box2 =
       Pt.((Bbox.se box1) - (Bbox.sw box2) + (Pt.pt deltax 0.0))
 
-    (* given box1, compute displacement vector for box2 to 
+    (* given box1, compute displacement vector for box2 to
      * be aligned the right of box1, so that their top sit on the same line. *)
     let align_horiz_top_vector deltax box1 box2 =
       Pt.((Bbox.ne box1) - (Bbox.nw box2) + (Pt.pt deltax 0.0))
@@ -703,21 +703,21 @@ module Make(N : Name) =
       in
       valign_aux l []
 
-    let rec depth =
+    let rec _depth =
       function
       | Cmd _ -> 1
-      | Hbox { layouts }
-      | Vbox { layouts } ->       
-        1 + (List.min (List.map depth layouts))
-      | Arrow { layout } ->
-        1 + (depth layout)
+      | Hbox { layouts ; _ }
+      | Vbox { layouts ; _ } ->
+        1 + (List.min (List.map _depth layouts))
+      | Arrow { layout ; _ } ->
+        1 + (_depth layout)
 
     exception Emit_error
 
     (* This function performs the layout. It produces:
-      . a list of named commands ((t * int option) list) where the name
+       . a list of named commands ((t * int option) list) where the name
         corresponds to the named_command they belong to
-     . a bounding box for the list of commands (Bbox.t)
+       . a bounding box for the list of commands (Bbox.t)
     *)
     let rec emit_commands_with_bbox (l : layout) : ((t list) * Bbox.t) =
       match l with
@@ -740,7 +740,7 @@ module Make(N : Name) =
         let cmds = List.fold_left (@) [] commands in
         (cmds, bbox)
       | Arrow { arrow; layout } ->
-        let { Arrow.start; finish; style } = arrow in
+        let { Arrow.start; finish; style; _ } = arrow in
         let (cmds, bbox) = emit_commands_with_bbox layout in
         let map   = collect_declared_points cmds in
         let s =
@@ -782,12 +782,12 @@ module Make(N : Name) =
         (*      (cmds @ sublayout_cmds,  Bbox.join (Bbox.of_commands cmds) bbox) *)
         (*   ) *)
         (* else *)
-        let arrow  = Arrow.mkarrow style s f in
+        let arrow  = Arrow.mkarrow ~style ~start:s ~finish:f in
         (arrow @ cmds,  Bbox.join (Bbox.of_commands arrow) bbox)
     (* let ls = List.map emit_commands_with_bbox ls in *)
 
     let emit_commands l =
-      let (cmds, bbox) = emit_commands_with_bbox l in
+      let (cmds, _bbox) = emit_commands_with_bbox l in
       [crop cmds]
 
     (* let emit_commands_centered (w,h) l = *)
@@ -796,4 +796,3 @@ module Make(N : Name) =
 
 
   end : CommandsSig with type name = N.t)
-

@@ -1,5 +1,0 @@
-B ../_build/default/lib
-FLG -open Vlayout__ -w -40
-PKG bigarray
-PKG cairo2
-PKG unix

@@ -10,13 +10,13 @@ let interpolate a b n =
       x :: (loop (x +. d) (i+1))
   in
   loop a 0
-              
-let rec to_sseq f sep l =
+
+let to_sseq f sep l =
   match l with
   | [] -> ""
   | [x] -> f x
   | x :: tl ->
     let res = List.fold_right (fun elt acc ->
-      sep ^ (f elt) ^ acc
-    ) tl "" in
+        sep ^ (f elt) ^ acc
+      ) tl "" in
     (f x) ^ res
