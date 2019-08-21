@@ -122,8 +122,6 @@ sig
 
 end
 
-open Batteries
-
 module Make(N : Name) =
   (struct
 
@@ -400,7 +398,7 @@ module Make(N : Name) =
       let b = Bbox.of_commands commands in
       translate ~v:(Pt.scale (Bbox.sw b) (~-. 1.0)) ~subcommands:commands
 
-    module NameMap = Legacy.Map.Make(N)
+    module NameMap = Map.Make(N)
 
     let collect_declared_points cmds =
       let rec traverse cmd mat map =
@@ -702,15 +700,6 @@ module Make(N : Name) =
           valign_aux ((commands, box2) :: l) ((cmds1, box1) :: acc)
       in
       valign_aux l []
-
-    let rec _depth =
-      function
-      | Cmd _ -> 1
-      | Hbox { layouts ; _ }
-      | Vbox { layouts ; _ } ->
-        1 + (List.min (List.map _depth layouts))
-      | Arrow { layout ; _ } ->
-        1 + (_depth layout)
 
     exception Emit_error
 

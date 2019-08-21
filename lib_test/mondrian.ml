@@ -170,7 +170,7 @@ let process_layout xmargin ymargin layout =
 
 let display_pdf filename layout =
   let layout, w, h  = process_layout 10.0 10.0 layout in (* TODO: make margins a parameter *)
-  let cairo_surface = Cairo.PDF.create ~fname:filename ~width:w ~height:h in
+  let cairo_surface = Cairo.PDF.create filename ~w ~h in
   let ctx           = Cairo.create cairo_surface in
   let _ =
     Cairo.set_matrix

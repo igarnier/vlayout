@@ -39,7 +39,7 @@ let font family slant weight size =
   match Hashtbl.find_opt font_table (family, slant, weight, size) with
   | None ->
     let spec = font_spec ~slant ~weight family in
-    let mat1 = Cairo.Matrix.init_scale ~x:size ~y:(~-. size) in
+    let mat1 = Cairo.Matrix.init_scale size (~-. size) in
     let mat2 = Cairo.Matrix.init_identity () in
     let opts = Cairo.Font_options.create () in
     Cairo.Scaled_font.create spec.face mat1 mat2 opts

@@ -1,5 +1,3 @@
-open Batteries
-
 (** r/g/b/ color; the values are meant to be in [0,1]. As an example, the color red
     corresponds to { r = 1.0; g = 0.0; b = 0.0 } and the color blue to
     { r = 0.0; g = 0.0; b = 1.0 }
@@ -51,14 +49,16 @@ let sample_around { r; g; b } =
 let enum_colors =
   let colors = [| red; green; blue; black; pink; cyan |] in
   let len    = Array.length colors in
-  Enum.range 0
-  |> Enum.map (fun i ->
-      if i < len then
-        colors.(i)
-      else
-        sample_around colors.(i mod len)
-    )
-
+  let i = ref 0 in
+  fun () ->
+  if !i < len then
+    (let res = colors.(!i) in
+     incr i ;
+     res)
+  else
+    (let res = sample_around colors.(!i) in
+     incr i ;
+     res)
 
 let gray p =
   if p < 0.0 || p > 1.0 then

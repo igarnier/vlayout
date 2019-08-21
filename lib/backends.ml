@@ -1,5 +1,3 @@
-open Batteries
-
 module Cairo(C : Commands.CommandsSig) =
 struct
 
@@ -7,7 +5,7 @@ struct
     match patt with
     | Style.Solid { c }      ->
       let { Style.r; g; b } = c in
-      let patt = Cairo.Pattern.create_rgb ~r ~g ~b in
+      let patt = Cairo.Pattern.create_rgb r g b in
       Cairo.set_source ctx patt
     | Style.Linear { p0; p1; stops } ->
       let x0 = Pt.x p0 and y0 = Pt.y p0 in
@@ -44,7 +42,7 @@ struct
     let m       = Cairo.get_matrix ctx in
     let m = { m with xx = 1.0; yy = 1.0 } in
     Cairo.set_matrix ctx m;
-    let ux, uy = Cairo.device_to_user_distance ctx ~x:1. ~y:1. in
+    let ux, uy = Cairo.device_to_user_distance ctx 1. 1. in
     Cairo.set_line_width ctx (max ux uy);
     Cairo.stroke_preserve ctx;
     Cairo.restore ctx
@@ -94,10 +92,10 @@ struct
 
   let render_box ctx mins maxs =
     let open Pt in
-    Cairo.move_to ctx ~x:(x mins) ~y:(y mins);
-    Cairo.line_to ctx ~x:(x mins) ~y:(y maxs);
-    Cairo.line_to ctx ~x:(x maxs) ~y:(y maxs);
-    Cairo.line_to ctx ~x:(x maxs) ~y:(y mins);
+    Cairo.move_to ctx (x mins) (y mins) ;
+    Cairo.line_to ctx (x mins) (y maxs) ;
+    Cairo.line_to ctx (x maxs) (y maxs) ;
+    Cairo.line_to ctx (x maxs) (y mins) ;
     Cairo.Path.close ctx
 
   (* for debug *)
@@ -200,7 +198,7 @@ struct
     (* [p] corresponds to the southwest of the text bbox, but
        Cairo expects a basepoint. *)
     let p = Pt.(p + (scale (Bbox.nw tbox - tpos) tscale)) in
-    Cairo.move_to ctx ~x:(Pt.x p) ~y:(Pt.y p);
+    Cairo.move_to ctx (Pt.x p) (Pt.y p);
     Cairo.save ctx;
     Cairo.set_matrix ctx m;
     Cairo.show_text ctx text;
@@ -212,7 +210,7 @@ struct
     match cmd.C.desc with
     | C.Circle { center; radius } ->
       let x = Pt.x center and y = Pt.y center in
-      Cairo.arc ctx ~x ~y ~r:radius ~a1:0.0 ~a2:(2.0 *. Tools.pi);
+      Cairo.arc ctx x y ~r:radius ~a1:0.0 ~a2:(2.0 *. Tools.pi);
       perform_stroke_and_fill_opt ctx fill_opt
     | C.Box { mins; maxs } ->
       render_box ctx mins maxs;
@@ -228,7 +226,7 @@ struct
          let llc  = C.text_position pos w h in
          let llc  = Pt.(llc + delta) in
          (Cairo.save ctx;
-          Cairo.move_to ctx ~x:(Pt.x llc) ~y:(Pt.y llc);
+          Cairo.move_to ctx (Pt.x llc) (Pt.y llc);
           Cairo.Scaled_font.set ctx text.Ctext.font;
           Cairo.show_text ctx text.str;
           Cairo.restore ctx;
@@ -240,34 +238,34 @@ struct
       let adjusted_fill = adjust_fill_to_bbox bbox style.Style.fill in
       Cairo.save ctx;
       set_pattern ctx style.Style.stroke;
-      Option.may (Cairo.set_dash ctx) style.dash;
-      Option.may (Cairo.set_line_width ctx) style.width;
+      (match style.dash with None -> () | Some patt -> Cairo.set_dash ctx patt) ;
+      (match style.width with None -> () | Some width -> Cairo.set_line_width ctx width) ;
       List.iter (render ctx adjusted_fill) subcommands;
       Cairo.restore ctx
     | C.Segment { p1; p2 } ->
       let x1 = Pt.x p1 and y1 = Pt.y p1 in
       let x2 = Pt.x p2 and y2 = Pt.y p2 in
-      Cairo.move_to ctx ~x:x1 ~y:y1;
-      Cairo.line_to ctx ~x:x2 ~y:y2;
+      Cairo.move_to ctx x1 y1;
+      Cairo.line_to ctx x2 y2;
       perform_stroke_and_fill_opt ctx fill_opt
     | C.Bezier { p1; c1; p2; c2 } ->
       Pt.(
-        Cairo.move_to ctx ~x:(x p1) ~y:(y p1);
+        Cairo.move_to ctx (x p1) (y p1);
         Cairo.curve_to ctx
-          ~x1:(x c1) ~y1:(y c1) ~x2:(x c2) ~y2:(y c2) ~x3:(x p2) ~y3:(y p2);
+          (x c1) (y c1) (x c2) (y c2) (x p2) (y p2);
         perform_stroke_and_fill_opt ctx fill_opt
       )
     | C.Image { pos = _ ; image } ->
       Cairo.save ctx;
       let bbox = C.Bbox.of_command cmd in
-      let ()   = Cairo.rectangle ctx ~x:(Pt.x (Bbox.sw bbox)) ~y:(Pt.y (Bbox.sw bbox)) ~w:(Bbox.width bbox) ~h:(Bbox.height bbox) in
+      let ()   = Cairo.rectangle ctx (Pt.x (Bbox.sw bbox)) (Pt.y (Bbox.sw bbox)) ~w:(Bbox.width bbox) ~h:(Bbox.height bbox) in
       let ()   = Cairo.clip ctx in
       let xsize  = Image.xsize image in
       let ysize  = Image.ysize image in
       let pixels = Bigarray.reshape_2 (Bigarray.genarray_of_array1 (Image.pixels image)) xsize ysize in
       let surf   = Cairo.Image.create_for_data32 ~alpha:false pixels in
       let patt   = Cairo.Pattern.create_for_surface surf in
-      let matrix = Cairo.Matrix.init_translate ~x:(-. (Pt.x (Bbox.sw bbox))) ~y:(-. (Pt.y (Bbox.sw bbox))) in
+      let matrix = Cairo.Matrix.init_translate (-. (Pt.x (Bbox.sw bbox))) (-. (Pt.y (Bbox.sw bbox))) in
       Cairo.Pattern.set_matrix patt matrix;
       Cairo.set_source ctx patt;
       Cairo.paint ctx;
@@ -275,17 +273,17 @@ struct
     | C.DeclPt { pt = _ ; name = _ } -> ()
     | C.Rotate { radians; subcommands } ->
       Cairo.save ctx;
-      Cairo.rotate ctx ~angle:radians;
+      Cairo.rotate ctx radians;
       List.iter (render ctx fill_opt) subcommands;
       Cairo.restore ctx
     | C.Translate { v; subcommands } ->
       Cairo.save ctx;
-      Cairo.translate ctx ~x:(Pt.x v) ~y:(Pt.y v);
+      Cairo.translate ctx (Pt.x v) (Pt.y v);
       List.iter (render ctx fill_opt) subcommands;
       Cairo.restore ctx
     | C.Scale { xs; ys; subcommands } ->
       Cairo.save ctx;
-      Cairo.scale ctx ~x:xs ~y:ys;
+      Cairo.scale ctx xs ys;
       List.iter (render ctx fill_opt) subcommands;
       Cairo.restore ctx
 
