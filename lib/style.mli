@@ -8,10 +8,10 @@ val r : color -> float
 val g : color -> float
 val b : color -> float
 
-(** Make an rgb color. *)                   
+(** Make an rgb color. *)
 val rgb : float -> float -> float -> color
 
-(** Some predefined colors. *)                                       
+(** Some predefined colors. *)
 val red : color
 val green : color
 val blue : color
@@ -23,7 +23,7 @@ val cyan : color
 
 (** Enumerating colors. The 8 first colors of the enumeration are those above (except white), the one after
     that are obtained by sampling around the previous ones. *)
-val enum_colors : color Batteries.Enum.t
+val enum_colors : unit -> color
 
 
 (** Pack an rgb color into the 24 first bits of an int32. *)
@@ -33,7 +33,7 @@ val to_int : color -> int32
     the f_i are required to be in [0,1] and be monotonically increasing. *)
 type color_stops = (color * float) list
 
-(** A pattern describes how to stroke or fill a surface. *)                                  
+(** A pattern describes how to stroke or fill a surface. *)
 type pattern =
   | Solid of  { c : color }
   | Linear of { p0 : Pt.t; p1 : Pt.t; stops : color_stops }
