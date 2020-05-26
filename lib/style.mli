@@ -5,7 +5,9 @@
 type color = { r : float; g : float; b : float }
 
 val r : color -> float
+
 val g : color -> float
+
 val b : color -> float
 
 (** Make an rgb color. *)
@@ -13,18 +15,24 @@ val rgb : float -> float -> float -> color
 
 (** Some predefined colors. *)
 val red : color
+
 val green : color
+
 val blue : color
+
 val black : color
+
 val white : color
+
 val gray : float -> color
+
 val pink : color
+
 val cyan : color
 
 (** Enumerating colors. The 8 first colors of the enumeration are those above (except white), the one after
     that are obtained by sampling around the previous ones. *)
 val enum_colors : unit -> color
-
 
 (** Pack an rgb color into the 24 first bits of an int32. *)
 val to_int : color -> int32
@@ -35,9 +43,10 @@ type color_stops = (color * float) list
 
 (** A pattern describes how to stroke or fill a surface. *)
 type pattern =
-  | Solid of  { c : color }
+  | Solid of { c : color }
   | Linear of { p0 : Pt.t; p1 : Pt.t; stops : color_stops }
-  | Radial of { c0 : Pt.t; r0 : float; c1 : Pt.t; r1 : float; stops : color_stops }
+  | Radial of
+      { c0 : Pt.t; r0 : float; c1 : Pt.t; r1 : float; stops : color_stops }
 
 type dash_pattern = float array
 
@@ -49,14 +58,18 @@ type dash_pattern = float array
     must be drawn.
  *)
 type t =
-  {
-    stroke : pattern;
-    width  : float option;
-    dash   : dash_pattern option;
-    fill   : pattern option
+  { stroke : pattern;
+    width : float option;
+    dash : dash_pattern option;
+    fill : pattern option
   }
 
-val make : stroke:pattern -> width:(float option) -> dash:(dash_pattern option) -> fill:(pattern option) -> t
+val make :
+  stroke:pattern ->
+  width:float option ->
+  dash:dash_pattern option ->
+  fill:pattern option ->
+  t
 
 val solid_stroke : clr:color -> pattern
 
@@ -80,7 +93,6 @@ val simple_vertical_gradient : clr1:color -> clr2:color -> pattern
 
 val simple_horizontal_gradient : clr1:color -> clr2:color -> pattern
 
-
 val print_color : color -> string
 
 val print_pattern : pattern -> string
@@ -89,54 +101,66 @@ val print : t -> string
 
 (* Predefined styles, for convenience *)
 
-module Solid :
-  sig
-    
-    val red   : t
-    val green : t
-    val blue  : t
-    val gray  : float -> t
-    val black : t
-    val pink  : t
-    val cyan  : t
-    
-  end
+module Solid : sig
+  val red : t
 
-module DotDash :
-  sig
-    
-    val red   : t
-    val green : t
-    val blue  : t
-    val gray  : float -> t
-    val black : t
-    val pink  : t
-    val cyan  : t
-    
-  end
+  val green : t
 
-module MediumDash :
-  sig
-    
-    val red   : t
-    val green : t
-    val blue  : t
-    val gray  : float -> t
-    val black : t
-    val pink  : t
-    val cyan  : t
-    
-  end
+  val blue : t
 
-module LargeDash :
-  sig
-    
-    val red   : t
-    val green : t
-    val blue  : t
-    val gray  : float -> t
-    val black : t
-    val pink  : t
-    val cyan  : t
-    
-  end
+  val gray : float -> t
+
+  val black : t
+
+  val pink : t
+
+  val cyan : t
+end
+
+module DotDash : sig
+  val red : t
+
+  val green : t
+
+  val blue : t
+
+  val gray : float -> t
+
+  val black : t
+
+  val pink : t
+
+  val cyan : t
+end
+
+module MediumDash : sig
+  val red : t
+
+  val green : t
+
+  val blue : t
+
+  val gray : float -> t
+
+  val black : t
+
+  val pink : t
+
+  val cyan : t
+end
+
+module LargeDash : sig
+  val red : t
+
+  val green : t
+
+  val blue : t
+
+  val gray : float -> t
+
+  val black : t
+
+  val pink : t
+
+  val cyan : t
+end

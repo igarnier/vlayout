@@ -1,8 +1,6 @@
 (** Axis-aligned bounding boxes.  *)
 
-module type S =
-sig
-
+module type S = sig
   (** Type of 2d bounding boxes. *)
   type t = Gg.Box2.t
 
@@ -43,7 +41,6 @@ sig
   (** Same as [of_points], taking an array instead of a list *)
   val of_points_arr : Pt.t array -> t
 
-
   (** The corners of a box b = { mins; maxs } can be accessed through
       the functions that follow, with the following convention:
       nw -n- ne
@@ -52,7 +49,6 @@ sig
       |       |
       sw -s- se
   *)
-
 
   (** North point of a box. *)
   val n : t -> Pt.t
@@ -80,8 +76,6 @@ sig
 
   (** Prints a bounding box. *)
   val print : t -> string
-
 end
-
 
 include S
