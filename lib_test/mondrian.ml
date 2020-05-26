@@ -4,7 +4,7 @@ open Vlayout
 module Name =
 struct
 
-  type t = ()
+  type t = unit
 
   let compare _ _ = 0
 
