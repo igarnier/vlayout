@@ -1,3 +1,3 @@
-module Cairo (C : Commands.CommandsSig) : sig
+module Cairo (C : Commands.S) : sig
   val render : Cairo.context -> C.t -> unit
 end

@@ -8,7 +8,7 @@ struct
 
   let compare _ _ = 0
 
-  let print _ = "()"
+  let pp fmtr () = Format.pp_print_string fmtr "()"
 
 end
 

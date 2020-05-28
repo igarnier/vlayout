@@ -3,10 +3,10 @@ module type Name = sig
 
   val compare : t -> t -> int
 
-  val print : t -> string
+  val pp : Format.formatter -> t -> unit
 end
 
-module type CommandsSig = sig
+module type S = sig
   type name
 
   type position = { pos : Pt.t; relpos : relpos }
@@ -22,12 +22,11 @@ module type CommandsSig = sig
     | NorthWest
     | NorthEast
 
-  type t = { uid : int; desc : desc }
+  type t = private { uid : int; desc : desc }
 
-  and desc =
+  and desc = private
     | Circle of { center : Pt.t; radius : float }
     | Box of { mins : Pt.t; maxs : Pt.t }
-    (* | Text    of { pos : position; width : float; height : float; text : string } *)
     | Text of { pos : position; text : Ctext.t }
     | Style of { style : Style.t; subcommands : t list }
     | Segment of { p1 : Pt.t; p2 : Pt.t }
@@ -79,7 +78,6 @@ module type CommandsSig = sig
 
   val box : mins:Pt.t -> maxs:Pt.t -> t
 
-  (* val text    : pos:position -> width:float -> height:float -> text:string -> t *)
   val text : pos:position -> size:float -> text:string -> t
 
   val style : style:Style.t -> subcommands:t list -> t
@@ -132,7 +130,7 @@ module type CommandsSig = sig
   (* val emit_commands_centered : float * float -> layout -> t list *)
 end
 
-module Make (N : Name) : CommandsSig with type name = N.t = struct
+module Make (N : Name) : S with type name = N.t = struct
   type name = N.t
 
   type position = { pos : Pt.t; relpos : relpos }
@@ -270,43 +268,42 @@ module Make (N : Name) : CommandsSig with type name = N.t = struct
           l
 
   let rec print c =
-    Printf.(
+    Format.(
       match c.desc with
       | Circle { center; radius } ->
-          sprintf "Circle(%s, %f)" (Pt.print center) radius
+          asprintf "Circle(%s, %f)" (Pt.print center) radius
       | Box { mins; maxs } ->
-          sprintf "Box(%s, %s)" (Pt.print mins) (Pt.print maxs)
+          asprintf "Box(%s, %s)" (Pt.print mins) (Pt.print maxs)
       | Text { pos; text } ->
-          sprintf "Text(%s, %s)" (print_position pos) text.Ctext.str
+          asprintf "Text(%s, %s)" (print_position pos) text.Ctext.str
       | Style { style; subcommands } ->
           let s = Tools.to_sseq print "; " subcommands in
-          sprintf "Style(%s, %s)" (Style.print style) s
+          asprintf "Style(%s, %s)" (Style.print style) s
       | Segment { p1; p2 } ->
-          sprintf "Segment(%s, %s)" (Pt.print p1) (Pt.print p2)
+          asprintf "Segment(%s, %s)" (Pt.print p1) (Pt.print p2)
       | Bezier { p1; c1; p2; c2 } ->
-          sprintf
+          asprintf
             "Bezier(%s, %s, %s, %s)"
             (Pt.print p1)
             (Pt.print c1)
             (Pt.print p2)
             (Pt.print c2)
       | Image { pos; image } ->
-          sprintf
+          asprintf
             "Image(%s, %d x %d)"
             (Pt.print pos)
             (Image.xsize image)
             (Image.ysize image)
-      | DeclPt { pt; name } ->
-          sprintf "DeclPt(%s, %s)" (Pt.print pt) (N.print name)
+      | DeclPt { pt; name } -> asprintf "DeclPt(%s, %a)" (Pt.print pt) N.pp name
       | Rotate { radians; subcommands } ->
           let s = Tools.to_sseq print "; " subcommands in
-          sprintf "Rotate(%f, %s)" radians s
+          asprintf "Rotate(%f, %s)" radians s
       | Translate { v; subcommands } ->
           let s = Tools.to_sseq print "; " subcommands in
-          sprintf "Translate(%s, %s)" (Pt.print v) s
+          asprintf "Translate(%s, %s)" (Pt.print v) s
       | Scale { xs; ys; subcommands } ->
           let s = Tools.to_sseq print "; " subcommands in
-          sprintf "Scale(%f, %f, %s)" xs ys s)
+          asprintf "Scale(%f, %f, %s)" xs ys s)
 
   let base_of_positioned_box h w { pos; relpos } =
     let x = Pt.x pos and y = Pt.y pos in
@@ -712,10 +709,11 @@ module Make (N : Name) : CommandsSig with type name = N.t = struct
         let s =
           try NameMap.find start map
           with Not_found ->
-            Printf.printf
-              "Commands.emit_commands_with_bbox: arrow start point %s was not \
+            Format.eprintf
+              "Commands.emit_commands_with_bbox: arrow start point %a was not \
                declared\n"
-              (N.print start) ;
+              N.pp
+              start ;
             let s = Tools.to_sseq print ";\n" cmds in
             Printf.printf "commands:\n%s\n" s ;
             raise Emit_error
@@ -723,10 +721,11 @@ module Make (N : Name) : CommandsSig with type name = N.t = struct
         let f =
           try NameMap.find finish map
           with Not_found ->
-            Printf.printf
-              "Commands.emit_commands_with_bbox: arrow end point %s was not \
+            Format.eprintf
+              "Commands.emit_commands_with_bbox: arrow end point %a was not \
                declared\n"
-              (N.print finish) ;
+              N.pp
+              finish ;
             let s = Tools.to_sseq print ";\n" cmds in
             Printf.printf "commands:\n%s\n" s ;
             raise Emit_error
