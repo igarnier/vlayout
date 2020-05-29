@@ -100,54 +100,62 @@ type t =
     fill : pattern option
   }
 
-(** String description of a color. *)
-let print_color { r; g; b } = Printf.sprintf "{ r=%f; g = %f; b = %f }" r g b
+let pp_color fmtr { r; g; b } =
+  Format.fprintf fmtr "{ r=%f; g = %f; b = %f }" r g b
 
-(** String description of a pattern. *)
-let print_pattern = function
-  | Solid { c } -> Printf.sprintf "Solid %s" (print_color c)
+let pp_comma fmtr () = Format.pp_print_string fmtr ","
+
+let pp_pattern fmtr = function
+  | Solid { c } -> Format.fprintf fmtr "Solid %a" pp_color c
   | Linear { p0; p1; stops } ->
-      let p0_s = Pt.print p0
-      and p1_s = Pt.print p1
-      and st_s =
-        Tools.to_sseq
-          (fun (c, ofs) -> Printf.sprintf "%s at %f" (print_color c) ofs)
-          ","
-          stops
-      in
-      Printf.sprintf "Linear { p0 = %s; p1 = %s; stops = %s }" p0_s p1_s st_s
+      Format.fprintf
+        fmtr
+        "Linear { p0 = %a; p1 = %a; stops = %a }"
+        Pt.pp
+        p0
+        Pt.pp
+        p1
+        (Format.pp_print_list ~pp_sep:pp_comma (fun fmtr (c, ofs) ->
+             Format.fprintf fmtr "%a at %f" pp_color c ofs))
+        stops
   | Radial { c0; r0; c1; r1; stops } ->
-      let c0_s = Pt.print c0
-      and c1_s = Pt.print c1
-      and st_s =
-        Tools.to_sseq
-          (fun (c, ofs) -> Printf.sprintf "%s at %f" (print_color c) ofs)
-          ","
-          stops
-      in
-      Printf.sprintf
-        "Radial { c0 = %s; r0 = %f; c1 = %s; r1 = %f; stops = %s }"
-        c0_s
+      Format.fprintf
+        fmtr
+        "Radial { c0 = %a; r0 = %f; c1 = %a; r1 = %f; stops = %a }"
+        Pt.pp
+        c0
         r0
-        c1_s
+        Pt.pp
+        c1
         r1
-        st_s
+        (Format.pp_print_list ~pp_sep:pp_comma (fun fmtr (c, ofs) ->
+             Format.fprintf fmtr "%a at %f" pp_color c ofs))
+        stops
 
-let print_dash_pattern dash_pattern =
+let pp_dash_pattern fmtr dash_pattern =
   let patt = Array.to_list dash_pattern in
-  let s = Tools.to_sseq string_of_float "," patt in
-  Printf.sprintf "Dash %s" s
+  Format.fprintf
+    fmtr
+    "Dash %a"
+    (Format.pp_print_list
+       ~pp_sep:(fun fmtr () -> Format.pp_print_string fmtr ",")
+       Format.pp_print_float)
+    patt
 
-(** String description of a style. *)
-let print { stroke; dash; fill; _ } =
-  let stroke_s = print_pattern stroke in
-  let dash_s =
-    match dash with None -> "None" | Some patt -> print_dash_pattern patt
-  in
-  let fill_s =
-    match fill with None -> "None" | Some patt -> print_pattern patt
-  in
-  Printf.sprintf "{ stroke = %s; dash = %s; fill = %s }" stroke_s dash_s fill_s
+let pp fmtr { stroke; dash; fill; _ } =
+  Format.fprintf
+    fmtr
+    "{ stroke = %a; dash = %a; fill = %a }"
+    pp_pattern
+    stroke
+    (Format.pp_print_option
+       ~none:(fun fmtr () -> Format.pp_print_string fmtr "None")
+       pp_dash_pattern)
+    dash
+    (Format.pp_print_option
+       ~none:(fun fmtr () -> Format.pp_print_string fmtr "None")
+       pp_pattern)
+    fill
 
 (** Make a style from a stroke and a fill. *)
 let make ~stroke ~width ~dash ~fill = { stroke; width; dash; fill }

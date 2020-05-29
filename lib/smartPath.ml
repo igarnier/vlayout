@@ -99,10 +99,8 @@ let intersect_box box seg =
   | (None, Some w, None, Some e) -> Some (WE, w, e)
   | (None, None, Some n, Some e) -> Some (NE, n, e)
   | _ ->
-      let _ =
-        Printf.printf
-          "SmartPath.intersect_box: warning, borderline case ignored\n%!"
-      in
+      Format.eprintf
+        "SmartPath.intersect_box: warning, borderline case ignored@." ;
       None
 
 (* failwith "SmartPath.intersect_box: error case; planar segment? lack of luck?" *)

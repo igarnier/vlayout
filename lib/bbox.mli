@@ -75,7 +75,7 @@ module type S = sig
   val ne : t -> Pt.t
 
   (** Prints a bounding box. *)
-  val print : t -> string
+  val pp : Format.formatter -> t -> unit
 end
 
 include S

@@ -26,7 +26,7 @@ val dot : t -> t -> float
 
 val normalize : t -> t
 
-val print : t -> string
+val pp : Format.formatter -> t -> unit
 
 val angle_of_vec : t * t -> float
 

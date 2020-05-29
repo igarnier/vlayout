@@ -39,7 +39,7 @@ module type S = sig
   (** Same as [of_points], taking an array instead of a list *)
   val of_points_arr : Pt.t array -> t
 
-  (** The corners of a box b = { mins; maxs } can be accessed through 
+  (** The corners of a box b = { mins; maxs } can be accessed through
       the functions that follow, with the following convention:
       nw -n- ne
       |       |
@@ -73,7 +73,7 @@ module type S = sig
   val ne : t -> Pt.t
 
   (** Prints a bounding box. *)
-  val print : t -> string
+  val pp : Format.formatter -> t -> unit
 end
 
 open Gg
@@ -127,6 +127,4 @@ let ne = Box2.tr_pt
 
 let nw = Box2.tl_pt
 
-let print box =
-  let mins = sw box and maxs = ne box in
-  Printf.sprintf "{ mins = %s;  maxs = %s }" (Pt.print mins) (Pt.print maxs)
+let pp = Box2.pp

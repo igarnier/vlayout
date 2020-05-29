@@ -93,11 +93,11 @@ val simple_vertical_gradient : clr1:color -> clr2:color -> pattern
 
 val simple_horizontal_gradient : clr1:color -> clr2:color -> pattern
 
-val print_color : color -> string
+val pp_color : Format.formatter -> color -> unit
 
-val print_pattern : pattern -> string
+val pp_pattern : Format.formatter -> pattern -> unit
 
-val print : t -> string
+val pp : Format.formatter -> t -> unit
 
 (* Predefined styles, for convenience *)
 

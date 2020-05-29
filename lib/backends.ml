@@ -100,7 +100,7 @@ module Cairo (C : Commands.S) = struct
     let m = Cairo.get_matrix ctx in
     let xscale = m.Cairo.xx in
     let yscale = m.Cairo.yy in
-    Printf.printf "scale: %f %f\n" xscale yscale
+    Format.eprintf "scale: %f %f@." xscale yscale
 
   let _text_bbox ctx str =
     (* Using Christophe Troestler's notes at
@@ -212,6 +212,7 @@ module Cairo (C : Commands.S) = struct
         Cairo.scale ctx xs ys ;
         List.iter (render ctx fill_opt) subcommands ;
         Cairo.restore ctx
+    | C.Wrap subcommands -> List.iter (render ctx fill_opt) subcommands
 
   let render ctx cmd = render ctx None cmd
 end

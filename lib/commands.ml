@@ -36,6 +36,7 @@ module type S = sig
     | Rotate of { radians : float; subcommands : t list }
     | Translate of { v : Pt.t; subcommands : t list }
     | Scale of { xs : float; ys : float; subcommands : t list }
+    | Wrap of t list
 
   type alias = t
 
@@ -98,9 +99,11 @@ module type S = sig
 
   val scale : xs:float -> ys:float -> subcommands:t list -> t
 
+  val wrap : subcommands:t list -> t
+
   val place : pos:position -> subcommands:t list -> t
 
-  val print : t -> string
+  val pp : Format.formatter -> t -> unit
 
   val center_to_page : float * float -> t list -> t list
 
@@ -148,17 +151,17 @@ module Make (N : Name) : S with type name = N.t = struct
 
   let point_of_position { pos; _ } = pos
 
-  let print_position { pos; relpos } =
+  let pp_position fmtr { pos; relpos } =
     match relpos with
-    | Absolute -> Printf.sprintf "Absolute(%s)" (Pt.print pos)
-    | North -> Printf.sprintf "North(%s)" (Pt.print pos)
-    | West -> Printf.sprintf "West(%s)" (Pt.print pos)
-    | South -> Printf.sprintf "South(%s)" (Pt.print pos)
-    | East -> Printf.sprintf "East(%s)" (Pt.print pos)
-    | SouthWest -> Printf.sprintf "SouthWest(%s)" (Pt.print pos)
-    | SouthEast -> Printf.sprintf "SouthEast(%s)" (Pt.print pos)
-    | NorthWest -> Printf.sprintf "NorthWest(%s)" (Pt.print pos)
-    | NorthEast -> Printf.sprintf "NorthEast(%s)" (Pt.print pos)
+    | Absolute -> Format.fprintf fmtr "Absolute(%a)" Pt.pp pos
+    | North -> Format.fprintf fmtr "North(%a)" Pt.pp pos
+    | West -> Format.fprintf fmtr "West(%a)" Pt.pp pos
+    | South -> Format.fprintf fmtr "South(%a)" Pt.pp pos
+    | East -> Format.fprintf fmtr "East(%a)" Pt.pp pos
+    | SouthWest -> Format.fprintf fmtr "SouthWest(%a)" Pt.pp pos
+    | SouthEast -> Format.fprintf fmtr "SouthEast(%a)" Pt.pp pos
+    | NorthWest -> Format.fprintf fmtr "NorthWest(%a)" Pt.pp pos
+    | NorthEast -> Format.fprintf fmtr "NorthEast(%a)" Pt.pp pos
 
   type t = { uid : int; desc : desc }
 
@@ -175,6 +178,7 @@ module Make (N : Name) : S with type name = N.t = struct
     | Rotate of { radians : float; subcommands : t list }
     | Translate of { v : Pt.t; subcommands : t list }
     | Scale of { xs : float; ys : float; subcommands : t list }
+    | Wrap of t list
 
   type alias = t
 
@@ -224,6 +228,8 @@ module Make (N : Name) : S with type name = N.t = struct
 
   let scale ~xs ~ys ~subcommands = mktag (Scale { xs; ys; subcommands })
 
+  let wrap ~subcommands = mktag (Wrap subcommands)
+
   (* Each basic command (type t) is associated to a designated point we call the "anchor"  *)
   let mid a b = Pt.barycenter a b
 
@@ -244,7 +250,7 @@ module Make (N : Name) : S with type name = N.t = struct
     | Image { pos; _ } -> pos
     | DeclPt _ | Style _ ->
         failwith "Commands.anchor_of: DeclPt and Style have no anchor"
-    | Rotate _ | Translate _ | Scale _ ->
+    | Rotate _ | Translate _ | Scale _ | Wrap _ ->
         failwith
           "Commands.anchor_of: unable to compute anchor for linear \
            transformations"
@@ -267,43 +273,52 @@ module Make (N : Name) : S with type name = N.t = struct
           []
           l
 
-  let rec print c =
+  let rec pp fmtr c =
     Format.(
       match c.desc with
       | Circle { center; radius } ->
-          asprintf "Circle(%s, %f)" (Pt.print center) radius
-      | Box { mins; maxs } ->
-          asprintf "Box(%s, %s)" (Pt.print mins) (Pt.print maxs)
+          fprintf fmtr "Circle(%a, %f)" Pt.pp center radius
+      | Box { mins; maxs } -> fprintf fmtr "Box(%a, %a)" Pt.pp mins Pt.pp maxs
       | Text { pos; text } ->
-          asprintf "Text(%s, %s)" (print_position pos) text.Ctext.str
+          fprintf fmtr "Text(%a, %s)" pp_position pos text.Ctext.str
       | Style { style; subcommands } ->
-          let s = Tools.to_sseq print "; " subcommands in
-          asprintf "Style(%s, %s)" (Style.print style) s
-      | Segment { p1; p2 } ->
-          asprintf "Segment(%s, %s)" (Pt.print p1) (Pt.print p2)
+          fprintf fmtr "Style(%a, %a)" Style.pp style pp_list subcommands
+      | Segment { p1; p2 } -> fprintf fmtr "Segment(%a, %a)" Pt.pp p1 Pt.pp p2
       | Bezier { p1; c1; p2; c2 } ->
-          asprintf
-            "Bezier(%s, %s, %s, %s)"
-            (Pt.print p1)
-            (Pt.print c1)
-            (Pt.print p2)
-            (Pt.print c2)
+          fprintf
+            fmtr
+            "Bezier(%a, %a, %a, %a)"
+            Pt.pp
+            p1
+            Pt.pp
+            c1
+            Pt.pp
+            p2
+            Pt.pp
+            c2
       | Image { pos; image } ->
-          asprintf
-            "Image(%s, %d x %d)"
-            (Pt.print pos)
+          fprintf
+            fmtr
+            "Image(%a, %d x %d)"
+            Pt.pp
+            pos
             (Image.xsize image)
             (Image.ysize image)
-      | DeclPt { pt; name } -> asprintf "DeclPt(%s, %a)" (Pt.print pt) N.pp name
+      | DeclPt { pt; name } -> fprintf fmtr "DeclPt(%a, %a)" Pt.pp pt N.pp name
       | Rotate { radians; subcommands } ->
-          let s = Tools.to_sseq print "; " subcommands in
-          asprintf "Rotate(%f, %s)" radians s
+          fprintf fmtr "Rotate(%f, %a)" radians pp_list subcommands
       | Translate { v; subcommands } ->
-          let s = Tools.to_sseq print "; " subcommands in
-          asprintf "Translate(%s, %s)" (Pt.print v) s
+          fprintf fmtr "Translate(%a, %a)" Pt.pp v pp_list subcommands
       | Scale { xs; ys; subcommands } ->
-          let s = Tools.to_sseq print "; " subcommands in
-          asprintf "Scale(%f, %f, %s)" xs ys s)
+          fprintf fmtr "Scale(%f, %f, %a)" xs ys pp_list subcommands
+      | Wrap subcommands -> fprintf fmtr "Wrap(%a)" pp_list subcommands)
+
+  and pp_list fmtr cl =
+    Format.pp_print_list
+      ~pp_sep:(fun fmtr () -> Format.fprintf fmtr "; ")
+      pp
+      fmtr
+      cl
 
   let base_of_positioned_box h w { pos; relpos } =
     let x = Pt.x pos and y = Pt.y pos in
@@ -361,6 +376,7 @@ module Make (N : Name) : S with type name = N.t = struct
       | Scale { xs; ys; subcommands } ->
           let bbox = of_commands subcommands in
           scale xs ys bbox
+      | Wrap subcommands -> of_commands subcommands
 
     and of_commands cl =
       let bboxes = List.rev_map of_command cl in
@@ -404,6 +420,7 @@ module Make (N : Name) : S with type name = N.t = struct
           let sca = Gg.M3.scale2 (Pt.pt xs ys) in
           let mat = Gg.M3.mul mat sca in
           traverse_list subcommands mat map
+      | Wrap subcommands -> traverse_list subcommands mat map
     and traverse_list cmds mat map =
       List.fold_left (fun map c -> traverse c mat map) map cmds
     in
@@ -714,8 +731,7 @@ module Make (N : Name) : S with type name = N.t = struct
                declared\n"
               N.pp
               start ;
-            let s = Tools.to_sseq print ";\n" cmds in
-            Printf.printf "commands:\n%s\n" s ;
+            Format.eprintf "commands:@.%a@." pp_list cmds ;
             raise Emit_error
         in
         let f =
@@ -726,8 +742,7 @@ module Make (N : Name) : S with type name = N.t = struct
                declared\n"
               N.pp
               finish ;
-            let s = Tools.to_sseq print ";\n" cmds in
-            Printf.printf "commands:\n%s\n" s ;
+            Format.eprintf "commands:@.%a@." pp_list cmds ;
             raise Emit_error
         in
         (* if arr.Arrow.smart then *)
