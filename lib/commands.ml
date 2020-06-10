@@ -1,4 +1,5 @@
-module type Name = sig
+(** The module type of names, used to refer to points, anchors and so on. *)
+module type Name_sig = sig
   type t
 
   val compare : t -> t -> int
@@ -6,6 +7,7 @@ module type Name = sig
   val pp : Format.formatter -> t -> unit
 end
 
+(** The module type of drawing commands. *)
 module type S = sig
   type name
 
@@ -22,20 +24,20 @@ module type S = sig
     | NorthWest
     | NorthEast
 
-  type t = private { uid : int; desc : desc }
+  type t = { uid : int; desc : desc }
 
-  and desc = private
+  and desc =
     | Circle of { center : Pt.t; radius : float }
     | Box of { mins : Pt.t; maxs : Pt.t }
     | Text of { pos : position; text : Ctext.t }
-    | Style of { style : Style.t; subcommands : t list }
+    | Style of { style : Style.t; cmd : t }
     | Segment of { p1 : Pt.t; p2 : Pt.t }
     | Bezier of { p1 : Pt.t; c1 : Pt.t; p2 : Pt.t; c2 : Pt.t }
     | Image of { pos : Pt.t; image : Image.t }
     | DeclPt of { pt : Pt.t; name : name }
-    | Rotate of { radians : float; subcommands : t list }
-    | Translate of { v : Pt.t; subcommands : t list }
-    | Scale of { xs : float; ys : float; subcommands : t list }
+    | Rotate of { radians : float; cmd : t }
+    | Translate of { v : Pt.t; cmd : t }
+    | Scale of { xs : float; ys : float; cmd : t }
     | Wrap of t list
 
   type alias = t
@@ -81,7 +83,7 @@ module type S = sig
 
   val text : pos:position -> size:float -> text:string -> t
 
-  val style : style:Style.t -> subcommands:t list -> t
+  val style : style:Style.t -> t -> t
 
   val segment : p1:Pt.t -> p2:Pt.t -> t
 
@@ -93,23 +95,23 @@ module type S = sig
 
   val declpt : pt:Pt.t -> name:name -> t
 
-  val rotate : radians:float -> subcommands:t list -> t
+  val rotate : radians:float -> t -> t
 
-  val translate : v:Pt.t -> subcommands:t list -> t
+  val translate : v:Pt.t -> t -> t
 
-  val scale : xs:float -> ys:float -> subcommands:t list -> t
+  val scale : xs:float -> ys:float -> t -> t
 
-  val wrap : subcommands:t list -> t
+  val wrap : t list -> t
 
-  val place : pos:position -> subcommands:t list -> t
+  val place : pos:position -> t -> t
 
   val pp : Format.formatter -> t -> unit
 
-  val center_to_page : float * float -> t list -> t list
+  val center_to_page : float * float -> t -> t
 
   module NameMap : Map.S with type key = name
 
-  val collect_declared_points : t list -> Pt.t NameMap.t
+  val collect_declared_points : t -> Pt.t NameMap.t
 
   type hposition = [ `Hcentered | `Bottom | `Top ]
 
@@ -117,7 +119,7 @@ module type S = sig
 
   type layout
 
-  val cmd : t list -> layout
+  val cmd : t -> layout
 
   val hbox : ?pos:hposition -> ?deltax:float -> layout list -> layout
 
@@ -126,14 +128,14 @@ module type S = sig
   val arrow : start:name -> finish:name -> sty:Arrow.style -> layout -> layout
 
   (* val smart_arrow : start:name -> finish:name -> sty:Arrow.style -> layout -> layout                                   *)
-  val emit_commands_with_bbox : layout -> t list * Bbox.t
+  val emit_commands_with_bbox : layout -> t * Bbox.t
 
-  val emit_commands : layout -> t list
+  val emit_commands : layout -> t
 
   (* val emit_commands_centered : float * float -> layout -> t list *)
 end
 
-module Make (N : Name) : S with type name = N.t = struct
+module Make (N : Name_sig) : S with type name = N.t = struct
   type name = N.t
 
   type position = { pos : Pt.t; relpos : relpos }
@@ -168,29 +170,28 @@ module Make (N : Name) : S with type name = N.t = struct
   and desc =
     | Circle of { center : Pt.t; radius : float }
     | Box of { mins : Pt.t; maxs : Pt.t }
-    (* | Text    of { pos : position; width : float; height : float; text : string } *)
     | Text of { pos : position; text : Ctext.t }
-    | Style of { style : Style.t; subcommands : t list }
+    | Style of { style : Style.t; cmd : t }
     | Segment of { p1 : Pt.t; p2 : Pt.t }
     | Bezier of { p1 : Pt.t; c1 : Pt.t; p2 : Pt.t; c2 : Pt.t }
     | Image of { pos : Pt.t; image : Image.t }
     | DeclPt of { pt : Pt.t; name : name }
-    | Rotate of { radians : float; subcommands : t list }
-    | Translate of { v : Pt.t; subcommands : t list }
-    | Scale of { xs : float; ys : float; subcommands : t list }
+    | Rotate of { radians : float; cmd : t }
+    | Translate of { v : Pt.t; cmd : t }
+    | Scale of { xs : float; ys : float; cmd : t }
     | Wrap of t list
 
   type alias = t
 
   let ubezier_control_points ~p1 ~p2 ~angle =
-    let delta = Pt.minus p2 p1 and n_angle = Pt.angle_of_vec (p1, p2) in
+    let delta = Pt.sub p2 p1 and n_angle = Pt.angle_of_vec (p1, p2) in
     let hdist = 0.3 *. Pt.norm delta in
     let out_angle = n_angle +. angle (* +. angle *) in
     let in_angle = n_angle -. angle (* +. Tools.pi *. 0.5 -. angle *) in
     let vec1 = Pt.scale (Pt.pt (cos out_angle) (sin out_angle)) hdist in
     let vec2 = Pt.scale (Pt.pt (cos in_angle) (sin in_angle)) ~-.hdist in
-    let c1 = Pt.plus p1 vec1 in
-    let c2 = Pt.plus p2 vec2 in
+    let c1 = Pt.add p1 vec1 in
+    let c2 = Pt.add p2 vec2 in
     (c1, c2)
 
   let fresh =
@@ -208,7 +209,7 @@ module Make (N : Name) : S with type name = N.t = struct
   let text ~pos ~size ~text =
     mktag (Text { pos; text = Ctext.create ~size text })
 
-  let style ~style ~subcommands = mktag (Style { style; subcommands })
+  let style ~style cmd = mktag (Style { style; cmd })
 
   let segment ~p1 ~p2 = mktag (Segment { p1; p2 })
 
@@ -222,13 +223,16 @@ module Make (N : Name) : S with type name = N.t = struct
 
   let declpt ~pt ~name = mktag (DeclPt { pt; name })
 
-  let rotate ~radians ~subcommands = mktag (Rotate { radians; subcommands })
+  let rotate ~radians cmd = mktag (Rotate { radians; cmd })
 
-  let translate ~v ~subcommands = mktag (Translate { v; subcommands })
+  let translate ~v cmd = mktag (Translate { v; cmd })
 
-  let scale ~xs ~ys ~subcommands = mktag (Scale { xs; ys; subcommands })
+  let scale ~xs ~ys cmd = mktag (Scale { xs; ys; cmd })
 
-  let wrap ~subcommands = mktag (Wrap subcommands)
+  let wrap = function
+    | [] -> failwith "Commands.wrap: empty list"
+    | [cmd] -> cmd
+    | cmds -> mktag (Wrap cmds)
 
   (* Each basic command (type t) is associated to a designated point we call the "anchor"  *)
   let mid a b = Pt.barycenter a b
@@ -281,8 +285,8 @@ module Make (N : Name) : S with type name = N.t = struct
       | Box { mins; maxs } -> fprintf fmtr "Box(%a, %a)" Pt.pp mins Pt.pp maxs
       | Text { pos; text } ->
           fprintf fmtr "Text(%a, %s)" pp_position pos text.Ctext.str
-      | Style { style; subcommands } ->
-          fprintf fmtr "Style(%a, %a)" Style.pp style pp_list subcommands
+      | Style { style; cmd } ->
+          fprintf fmtr "Style(%a, %a)" Style.pp style pp cmd
       | Segment { p1; p2 } -> fprintf fmtr "Segment(%a, %a)" Pt.pp p1 Pt.pp p2
       | Bezier { p1; c1; p2; c2 } ->
           fprintf
@@ -305,12 +309,9 @@ module Make (N : Name) : S with type name = N.t = struct
             (Image.xsize image)
             (Image.ysize image)
       | DeclPt { pt; name } -> fprintf fmtr "DeclPt(%a, %a)" Pt.pp pt N.pp name
-      | Rotate { radians; subcommands } ->
-          fprintf fmtr "Rotate(%f, %a)" radians pp_list subcommands
-      | Translate { v; subcommands } ->
-          fprintf fmtr "Translate(%a, %a)" Pt.pp v pp_list subcommands
-      | Scale { xs; ys; subcommands } ->
-          fprintf fmtr "Scale(%f, %f, %a)" xs ys pp_list subcommands
+      | Rotate { radians; cmd } -> fprintf fmtr "Rotate(%f, %a)" radians pp cmd
+      | Translate { v; cmd } -> fprintf fmtr "Translate(%a, %a)" Pt.pp v pp cmd
+      | Scale { xs; ys; cmd } -> fprintf fmtr "Scale(%f, %f, %a)" xs ys pp cmd
       | Wrap subcommands -> fprintf fmtr "Wrap(%a)" pp_list subcommands)
 
   and pp_list fmtr cl =
@@ -365,42 +366,39 @@ module Make (N : Name) : S with type name = N.t = struct
           box (Pt.pt (min x1 x2) (min y1 y2)) (Pt.pt (max x1 x2) (max y1 y2))
       | Bezier { p1; c1; p2; c2 } -> join (box p1 c1) (box p2 c2)
       | Image { pos; image } -> Bbox.translate pos (Image.bbox image)
-      | Style { subcommands; _ } -> of_commands subcommands
+      | Style { cmd; _ } -> of_command cmd
       | DeclPt { pt; _ } -> box pt pt
-      | Rotate { radians; subcommands } ->
-          let bbox = of_commands subcommands in
+      | Rotate { radians; cmd } ->
+          let bbox = of_command cmd in
           rotate radians bbox
-      | Translate { v; subcommands } ->
-          let bbox = of_commands subcommands in
+      | Translate { v; cmd } ->
+          let bbox = of_command cmd in
           translate v bbox
-      | Scale { xs; ys; subcommands } ->
-          let bbox = of_commands subcommands in
+      | Scale { xs; ys; cmd } ->
+          let bbox = of_command cmd in
           scale xs ys bbox
       | Wrap subcommands -> of_commands subcommands
 
     and of_commands cl =
-      let bboxes = List.rev_map of_command cl in
-      List.fold_left join empty bboxes
+      List.fold_left
+        (fun acc cmd ->
+          let bbox = of_command cmd in
+          join bbox acc)
+        empty
+        cl
   end
 
-  let center_to_page (w, h) (commands : t list) =
-    let b = Bbox.of_commands commands in
+  let center_to_page (w, h) (cmd : t) =
+    let b = Bbox.of_command cmd in
     let boxw = Bbox.width b in
     let boxh = Bbox.height b in
     let deltah = 0.5 *. (h -. boxh) in
     let deltaw = 0.5 *. (w -. boxw) in
-    [ translate
-        ~v:(Pt.plus (Pt.scale (Bbox.sw b) ~-.1.0) (Pt.pt deltaw deltah))
-        ~subcommands:commands ]
-
-  (* invariant: preserve order of commands *)
-  let crop (commands : t list) =
-    let b = Bbox.of_commands commands in
-    translate ~v:(Pt.scale (Bbox.sw b) ~-.1.0) ~subcommands:commands
+    translate ~v:(Pt.sub (Pt.pt deltaw deltah) (Bbox.sw b)) cmd
 
   module NameMap = Map.Make (N)
 
-  let collect_declared_points cmds =
+  let collect_declared_points cmd =
     let rec traverse cmd mat map =
       match cmd.desc with
       | Circle _ | Box _ | Text _ | Style _ | Segment _ | Bezier _ | Image _ ->
@@ -408,23 +406,23 @@ module Make (N : Name) : S with type name = N.t = struct
       | DeclPt { pt; name } ->
           let global_pt = Gg.P2.tr mat pt in
           NameMap.add name global_pt map
-      | Rotate { radians; subcommands } ->
+      | Rotate { radians; cmd } ->
           let rot = Gg.M3.rot2 radians in
           let mat = Gg.M3.mul mat rot in
-          traverse_list subcommands mat map
-      | Translate { v; subcommands } ->
+          traverse cmd mat map
+      | Translate { v; cmd } ->
           let tra = Gg.M3.move2 v in
           let mat = Gg.M3.mul mat tra in
-          traverse_list subcommands mat map
-      | Scale { xs; ys; subcommands } ->
+          traverse cmd mat map
+      | Scale { xs; ys; cmd } ->
           let sca = Gg.M3.scale2 (Pt.pt xs ys) in
           let mat = Gg.M3.mul mat sca in
-          traverse_list subcommands mat map
+          traverse cmd mat map
       | Wrap subcommands -> traverse_list subcommands mat map
     and traverse_list cmds mat map =
       List.fold_left (fun map c -> traverse c mat map) map cmds
     in
-    traverse_list cmds Gg.M3.id NameMap.empty
+    traverse cmd Gg.M3.id NameMap.empty
 
   (* Arrows *)
   module Arrow = struct
@@ -442,9 +440,9 @@ module Make (N : Name) : S with type name = N.t = struct
 
     type t =
       { start : name;
-        (* Name of starting point (see DeclPt)*)
+        (* Name_sig of starting point (see DeclPt)*)
         finish : name;
-        (* Name of finishing point *)
+        (* Name_sig of finishing point *)
         style : style;
         smart : bool
             (* A smart arrow will (try to) avoid command layout boxes (Cmd)
@@ -467,15 +465,13 @@ module Make (N : Name) : S with type name = N.t = struct
       let (left_leg, right_leg) =
         mkarrowhead ~legs_length:style.legs ~legs_angle:style.angle
       in
-      let vec = Pt.minus finish start in
+      let vec = Pt.sub finish start in
       let vec_angle = Pt.angle_of_vec (start, finish) in
-      let shaft_start = Pt.plus start (Pt.scale vec style.startp) in
-      let shaft_finish = Pt.plus start (Pt.scale vec style.endp) in
-      let arrow_pos = Pt.plus start (Pt.scale vec style.arrowp) in
-      let left_leg = Pt.plus arrow_pos (Pt.rotate_vector vec_angle left_leg) in
-      let right_leg =
-        Pt.plus arrow_pos (Pt.rotate_vector vec_angle right_leg)
-      in
+      let shaft_start = Pt.add start (Pt.scale vec style.startp) in
+      let shaft_finish = Pt.add start (Pt.scale vec style.endp) in
+      let arrow_pos = Pt.add start (Pt.scale vec style.arrowp) in
+      let left_leg = Pt.add arrow_pos (Pt.rotate_vector vec_angle left_leg) in
+      let right_leg = Pt.add arrow_pos (Pt.rotate_vector vec_angle right_leg) in
       [ segment ~p1:shaft_start ~p2:shaft_finish;
         segment ~p1:arrow_pos ~p2:left_leg;
         segment ~p1:arrow_pos ~p2:right_leg ]
@@ -488,10 +484,10 @@ module Make (N : Name) : S with type name = N.t = struct
         let (left_leg, right_leg) =
           mkarrowhead ~legs_length:style.legs ~legs_angle:style.angle
         in
-        let vec = Pt.minus finish start in
+        let vec = Pt.sub finish start in
         let vec_angle = Pt.angle_of_vec (start, finish) in
-        let shaft_start = Pt.plus start (Pt.scale vec style.startp) in
-        let shaft_finish = Pt.plus start (Pt.scale vec style.endp) in
+        let shaft_start = Pt.add start (Pt.scale vec style.startp) in
+        let shaft_finish = Pt.add start (Pt.scale vec style.endp) in
         let (c1, c2) =
           ubezier_control_points ~p1:shaft_start ~p2:shaft_finish ~angle
         in
@@ -504,11 +500,9 @@ module Make (N : Name) : S with type name = N.t = struct
             (* style.arrowp = 1.0 *)
             (shaft_finish, Tools.pi -. (vec_angle +. angle))
         in
-        let left_leg =
-          Pt.plus arrow_pos (Pt.rotate_vector rot_angle left_leg)
-        in
+        let left_leg = Pt.add arrow_pos (Pt.rotate_vector rot_angle left_leg) in
         let right_leg =
-          Pt.plus arrow_pos (Pt.rotate_vector rot_angle right_leg)
+          Pt.add arrow_pos (Pt.rotate_vector rot_angle right_leg)
         in
         [ bezier ~p1:shaft_start ~c1 ~p2:shaft_finish ~c2;
           segment ~p1:arrow_pos ~p2:left_leg;
@@ -530,7 +524,7 @@ module Make (N : Name) : S with type name = N.t = struct
             failwith "Commands.Arrow.mk_multisegment_arrow: not enough points"
         | (p1, p2) :: tl ->
             let vec = Pt.(p2 - p1) in
-            let effective_start = Pt.plus p1 (Pt.scale vec style.startp) in
+            let effective_start = Pt.add p1 (Pt.scale vec style.startp) in
             (effective_start, p2) :: tl
       in
       match List.rev segments with
@@ -540,15 +534,15 @@ module Make (N : Name) : S with type name = N.t = struct
           let (left_leg, right_leg) =
             mkarrowhead ~legs_length:style.legs ~legs_angle:style.angle
           in
-          let vec = Pt.minus finish start in
+          let vec = Pt.sub finish start in
           let vec_angle = Pt.angle_of_vec (start, finish) in
-          let shaft_finish = Pt.plus start (Pt.scale vec style.endp) in
-          let arrow_pos = Pt.plus start (Pt.scale vec style.arrowp) in
+          let shaft_finish = Pt.add start (Pt.scale vec style.endp) in
+          let arrow_pos = Pt.add start (Pt.scale vec style.arrowp) in
           let left_leg =
-            Pt.plus arrow_pos (Pt.rotate_vector vec_angle left_leg)
+            Pt.add arrow_pos (Pt.rotate_vector vec_angle left_leg)
           in
           let right_leg =
-            Pt.plus arrow_pos (Pt.rotate_vector vec_angle right_leg)
+            Pt.add arrow_pos (Pt.rotate_vector vec_angle right_leg)
           in
           let arrow =
             [ segment ~p1:pn ~p2:shaft_finish;
@@ -576,20 +570,20 @@ module Make (N : Name) : S with type name = N.t = struct
   end
 
   (* Box autolayout *)
-  let place ~pos ~subcommands =
-    let bbox = Bbox.of_commands subcommands in
+  let place ~pos cmd =
+    let bbox = Bbox.of_command cmd in
     let width = Bbox.width bbox in
     let height = Bbox.height bbox in
     let base = base_of_positioned_box height width pos in
     let v = Pt.(base - Bbox.sw bbox) in
-    translate ~v ~subcommands
+    translate ~v cmd
 
   type hposition = [ `Hcentered | `Bottom | `Top ]
 
   type vposition = [ `Vcentered | `Left | `Right ]
 
   type layout =
-    | Cmd of t list
+    | Cmd of t
     | Hbox of { pos : hposition; deltax : float; layouts : layout list }
     | Vbox of { pos : vposition; deltay : float; layouts : layout list }
     | Arrow of { arrow : Arrow.t; layout : layout }
@@ -598,7 +592,7 @@ module Make (N : Name) : S with type name = N.t = struct
 
   (* A public interface to build stuff in [layout] *)
 
-  let cmd cmds = Cmd cmds
+  let cmd c = Cmd c
 
   let hbox ?(pos = `Hcentered) ?(deltax = 0.0) layouts =
     Hbox { pos; deltax; layouts }
@@ -670,11 +664,11 @@ module Make (N : Name) : S with type name = N.t = struct
       match l with
       | [] -> List.rev acc
       | [elt] -> List.rev (elt :: acc)
-      | (cmds1, box1) :: (cmds2, box2) :: l ->
+      | (cmd1, box1) :: (cmd2, box2) :: l ->
           let v = align_function box1 box2 in
-          let commands = [translate ~v ~subcommands:cmds2] in
+          let command = translate ~v cmd2 in
           let box2 = Bbox.translate v box2 in
-          halign_aux ((commands, box2) :: l) ((cmds1, box1) :: acc)
+          halign_aux ((command, box2) :: l) ((cmd1, box1) :: acc)
     in
     halign_aux l []
 
@@ -684,11 +678,11 @@ module Make (N : Name) : S with type name = N.t = struct
       match l with
       | [] -> List.rev acc
       | [elt] -> List.rev (elt :: acc)
-      | (cmds1, box1) :: (cmds2, box2) :: l ->
+      | (cmd1, box1) :: (cmd2, box2) :: l ->
           let v = align_function box1 box2 in
-          let commands = [translate ~v ~subcommands:cmds2] in
+          let command = translate ~v cmd2 in
           let box2 = Bbox.translate v box2 in
-          valign_aux ((commands, box2) :: l) ((cmds1, box1) :: acc)
+          valign_aux ((command, box2) :: l) ((cmd1, box1) :: acc)
     in
     valign_aux l []
 
@@ -699,30 +693,30 @@ module Make (N : Name) : S with type name = N.t = struct
       corresponds to the named_command they belong to
      . a bounding box for the list of commands (Bbox.t)
   *)
-  let rec emit_commands_with_bbox (l : layout) : t list * Bbox.t =
+  let rec emit_commands_with_bbox (l : layout) : t * Bbox.t =
     match l with
-    | Cmd cmds ->
-        let cmds = [crop cmds] in
+    | Cmd cmd ->
+        (* let cmd = crop cmd in *)
         (* let named_cmds = tag cmds named_command.cmd_name in *)
-        (cmds, Bbox.of_commands cmds)
+        (cmd, Bbox.of_command cmd)
     | Hbox { pos; deltax; layouts } ->
         let ls = List.map emit_commands_with_bbox layouts in
         let aligned = halign ls (horiz_align pos deltax) in
         let (commands, boxes) = List.split aligned in
         let bbox = List.fold_left Bbox.join Bbox.empty boxes in
-        let cmds = List.fold_left ( @ ) [] commands in
+        let cmds = wrap commands in
         (cmds, bbox)
     | Vbox { pos; deltay; layouts } ->
         let ls = List.map emit_commands_with_bbox layouts in
         let aligned = valign ls (vert_align pos deltay) in
         let (commands, boxes) = List.split aligned in
         let bbox = List.fold_left Bbox.join Bbox.empty boxes in
-        let cmds = List.fold_left ( @ ) [] commands in
+        let cmds = wrap commands in
         (cmds, bbox)
     | Arrow { arrow; layout } ->
         let { Arrow.start; finish; style; _ } = arrow in
-        let (cmds, bbox) = emit_commands_with_bbox layout in
-        let map = collect_declared_points cmds in
+        let (cmd, bbox) = emit_commands_with_bbox layout in
+        let map = collect_declared_points cmd in
         let s =
           try NameMap.find start map
           with Not_found ->
@@ -731,7 +725,7 @@ module Make (N : Name) : S with type name = N.t = struct
                declared\n"
               N.pp
               start ;
-            Format.eprintf "commands:@.%a@." pp_list cmds ;
+            Format.eprintf "command:@.%a@." pp cmd ;
             raise Emit_error
         in
         let f =
@@ -742,7 +736,7 @@ module Make (N : Name) : S with type name = N.t = struct
                declared\n"
               N.pp
               finish ;
-            Format.eprintf "commands:@.%a@." pp_list cmds ;
+            Format.eprintf "commands:@.%a@." pp cmd ;
             raise Emit_error
         in
         (* if arr.Arrow.smart then *)
@@ -769,13 +763,13 @@ module Make (N : Name) : S with type name = N.t = struct
         (*   ) *)
         (* else *)
         let arrow = Arrow.mkarrow ~style ~start:s ~finish:f in
-        (arrow @ cmds, Bbox.join (Bbox.of_commands arrow) bbox)
+        (wrap (cmd :: arrow), Bbox.join (Bbox.of_commands arrow) bbox)
 
   (* let ls = List.map emit_commands_with_bbox ls in *)
 
   let emit_commands l =
     let (cmds, _bbox) = emit_commands_with_bbox l in
-    [crop cmds]
+    cmds
 
   (* let emit_commands_centered (w,h) l = *)
   (*   let (cmds, bbox) = emit_commands_with_bbox l in *)

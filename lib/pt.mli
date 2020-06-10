@@ -8,9 +8,9 @@ val x : t -> float
 
 val y : t -> float
 
-val plus : t -> t -> t
+val add : t -> t -> t
 
-val minus : t -> t -> t
+val sub : t -> t -> t
 
 val mul : t -> t -> t
 
@@ -25,8 +25,6 @@ val barycenter : t -> t -> t
 val dot : t -> t -> float
 
 val normalize : t -> t
-
-val pp : Format.formatter -> t -> unit
 
 val angle_of_vec : t * t -> float
 
@@ -53,3 +51,5 @@ val ( *| ) : t -> float -> t
 val ( |* ) : float -> t -> t
 
 val ( ~- ) : t -> t
+
+val pp : Format.formatter -> t -> unit

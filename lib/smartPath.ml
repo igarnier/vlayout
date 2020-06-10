@@ -4,7 +4,7 @@ let epsilon = 0.001
 
 let near_zero x = abs_float x <= epsilon
 
-let dist p1 p2 = norm (minus p2 p1)
+let dist p1 p2 = norm (sub p2 p1)
 
 let segment_intersection (p1, p2) (p3, p4) =
   let n12 = normalize (p2 - p1) in
@@ -17,8 +17,8 @@ let segment_intersection (p1, p2) (p3, p4) =
   let p1y = Pt.y p1 in
   let p3x = Pt.x p3 in
   let p3y = Pt.y p3 in
-  (* let { x = u1x; y = u1y } = normalize (minus p2 p1) in *)
-  (* let { x = u2x; y = u2y } = normalize (minus p4 p3) in *)
+  (* let { x = u1x; y = u1y } = normalize (sub p2 p1) in *)
+  (* let { x = u2x; y = u2y } = normalize (sub p4 p3) in *)
   (* let { x = p1x; y = p1y } = p1 in *)
   (* let { x = p3x; y = p3y } = p3 in *)
   let dot = (u1x *. u2x) +. (u1y *. u2y) in
@@ -30,13 +30,13 @@ let segment_intersection (p1, p2) (p3, p4) =
     let k1 = p3y -. p1y +. (k2 *. u2y) in
     if k1 <= epsilon || k1 >= dist p1 p2 || k2 <= epsilon || k2 >= dist p3 p4
     then None
-    else Some (plus p3 (pt (k2 *. u2x) (k2 *. u2y)))
+    else Some (add p3 (pt (k2 *. u2x) (k2 *. u2y)))
   else if near_zero u2x then
     let k1 = (p3x -. p1x) /. u1x in
     let k2 = p1y -. p3y +. (k1 *. u1y) in
     if k1 <= epsilon || k1 >= dist p1 p2 || k2 <= epsilon || k2 >= dist p3 p4
     then None
-    else Some (plus p3 (pt (k2 *. u2x) (k2 *. u2y)))
+    else Some (add p3 (pt (k2 *. u2x) (k2 *. u2y)))
   else
     (* regular case, at last *)
     let k2 =
@@ -46,7 +46,7 @@ let segment_intersection (p1, p2) (p3, p4) =
     else
       let k1 = ((k2 *. u2x) +. p3x -. p1x) /. u1x in
       if k1 <= epsilon || k1 >= dist p1 p2 then None
-      else Some (plus p3 (pt (k2 *. u2x) (k2 *. u2y)))
+      else Some (add p3 (pt (k2 *. u2x) (k2 *. u2y)))
 
 (* let point_in_box = Gg.Box2.mem *)
 
@@ -120,15 +120,15 @@ let sort_boxes_by_dist origin boxes =
     boxes
 
 let solution shift box pb orient =
-  let west_sol w = minus w (pt shift 0.0) in
-  let south_sol s = minus s (pt 0.0 shift) in
-  let north_sol n = plus n (pt 0.0 shift) in
-  let east_sol e = plus e (pt shift 0.0) in
+  let west_sol w = sub w (pt shift 0.0) in
+  let south_sol s = sub s (pt 0.0 shift) in
+  let north_sol n = add n (pt 0.0 shift) in
+  let east_sol e = add e (pt shift 0.0) in
   let (a, b, c, d) = corners box in
-  let a_sol = minus a (pt shift shift) in
-  let b_sol = plus b (pt shift ~-.shift) in
-  let c_sol = plus c (pt ~-.shift shift) in
-  let d_sol = plus d (pt shift shift) in
+  let a_sol = sub a (pt shift shift) in
+  let b_sol = add b (pt shift ~-.shift) in
+  let c_sol = add c (pt ~-.shift shift) in
+  let d_sol = add d (pt shift shift) in
   match pb with
   | (SW, s, w) -> (
       let w' = west_sol w in

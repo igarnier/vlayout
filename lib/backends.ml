@@ -2,7 +2,7 @@ module Cairo (C : Commands.S) = struct
   let set_pattern ctx patt =
     match patt with
     | Style.Solid { c } ->
-        let { Style.r; g; b } = c in
+        let { Color.r; g; b } = c in
         let patt = Cairo.Pattern.create_rgb r g b in
         Cairo.set_source ctx patt
     | Style.Linear { p0; p1; stops } ->
@@ -11,7 +11,7 @@ module Cairo (C : Commands.S) = struct
         let patt = Cairo.Pattern.create_linear ~x0 ~y0 ~x1 ~y1 in
         List.iter
           (fun (c, ofs) ->
-            let { Style.r; g; b } = c in
+            let { Color.r; g; b } = c in
             Cairo.Pattern.add_color_stop_rgb patt ~ofs r g b)
           stops ;
         Cairo.set_source ctx patt
@@ -21,12 +21,12 @@ module Cairo (C : Commands.S) = struct
         let patt = Cairo.Pattern.create_radial ~x0 ~y0 ~r0 ~x1 ~y1 ~r1 in
         List.iter
           (fun (c, ofs) ->
-            let { Style.r; g; b } = c in
+            let { Color.r; g; b } = c in
             Cairo.Pattern.add_color_stop_rgb patt ~ofs r g b)
           stops ;
         Cairo.set_source ctx patt
 
-  (* Perform the stroke at uniform scale, so that *)
+  (* Perform the stroke at uniform scale *)
   let stroke_uniform_scale ctx =
     Cairo.save ctx ;
     let m = Cairo.get_matrix ctx in
@@ -139,8 +139,8 @@ module Cairo (C : Commands.S) = struct
           Cairo.show_text ctx text.str ;
           Cairo.restore ctx ;
           perform_stroke_and_fill_opt ctx fill_opt
-    | C.Style { style; subcommands } ->
-        let bbox = C.Bbox.of_commands subcommands in
+    | C.Style { style; cmd } ->
+        let bbox = C.Bbox.of_command cmd in
         let adjusted_fill = adjust_fill_to_bbox bbox style.Style.fill in
         Cairo.save ctx ;
         set_pattern ctx style.Style.stroke ;
@@ -150,7 +150,7 @@ module Cairo (C : Commands.S) = struct
         ( match style.width with
         | None -> ()
         | Some width -> Cairo.set_line_width ctx width ) ;
-        List.iter (render ctx adjusted_fill) subcommands ;
+        render ctx adjusted_fill cmd ;
         Cairo.restore ctx
     | C.Segment { p1; p2 } ->
         let x1 = Pt.x p1 and y1 = Pt.y p1 in
@@ -197,20 +197,20 @@ module Cairo (C : Commands.S) = struct
         Cairo.paint ctx ;
         Cairo.restore ctx
     | C.DeclPt { pt = _; name = _ } -> ()
-    | C.Rotate { radians; subcommands } ->
+    | C.Rotate { radians; cmd } ->
         Cairo.save ctx ;
         Cairo.rotate ctx radians ;
-        List.iter (render ctx fill_opt) subcommands ;
+        render ctx fill_opt cmd ;
         Cairo.restore ctx
-    | C.Translate { v; subcommands } ->
+    | C.Translate { v; cmd } ->
         Cairo.save ctx ;
         Cairo.translate ctx (Pt.x v) (Pt.y v) ;
-        List.iter (render ctx fill_opt) subcommands ;
+        render ctx fill_opt cmd ;
         Cairo.restore ctx
-    | C.Scale { xs; ys; subcommands } ->
+    | C.Scale { xs; ys; cmd } ->
         Cairo.save ctx ;
         Cairo.scale ctx xs ys ;
-        List.iter (render ctx fill_opt) subcommands ;
+        render ctx fill_opt cmd ;
         Cairo.restore ctx
     | C.Wrap subcommands -> List.iter (render ctx fill_opt) subcommands
 

@@ -1,4 +1,4 @@
-opam-version: "1.2"
+opam-version: "2.0"
 maintainer: "ilias.gar@gmail.com"
 authors: ["Ilias Garnier"]
 homepage: "https://github.com/igarnier/vlayout"
@@ -10,11 +10,9 @@ build: [
 ]
 depends: [
   "dune" { >= "1.7" }
-  "cairo2"
-  "gg"
+  "vlayout"
+  "data-encoding"
 ]
-available: [ ocaml-version >= "4.04.1" ]
 descr: "
-Declarative interface to Cairo, in the spirit of the venerable mlpost.
-Depends on cairo2 and gg.
+Data encodings for vlayout.
 "

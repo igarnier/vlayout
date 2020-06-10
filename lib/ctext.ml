@@ -1,15 +1,11 @@
 (* Handling text. *)
 
 type font_spec =
-  { family : string;
-    slant : Cairo.slant;
-    weight : Cairo.weight;
-    face : [ `Toy ] Cairo.Font_face.t
-  }
+  { family : string; slant : Cairo.slant; weight : Cairo.weight; size : float }
 
 type t =
   { str : string;
-    size : float;
+    spec : font_spec;
     font : [ `Toy ] Cairo.Scaled_font.t;
     base : Pt.t;
     box : Bbox.t
@@ -20,24 +16,21 @@ let face_table = Hashtbl.create 10
 let font_table = Hashtbl.create 10
 
 let font_spec ?(slant = Cairo.Upright) ?(weight = Cairo.Normal) family =
-  let face =
-    match Hashtbl.find_opt face_table (slant, weight, family) with
-    | None ->
-        let face = Cairo.Font_face.create ~family slant weight in
-        Hashtbl.add face_table (slant, weight, family) face ;
-        face
-    | Some face -> face
-  in
-  { family; slant; weight; face }
+  match Hashtbl.find_opt face_table (slant, weight, family) with
+  | None ->
+      let face = Cairo.Font_face.create ~family slant weight in
+      Hashtbl.add face_table (slant, weight, family) face ;
+      face
+  | Some face -> face
 
 let font family slant weight size =
   match Hashtbl.find_opt font_table (family, slant, weight, size) with
   | None ->
-      let spec = font_spec ~slant ~weight family in
+      let face = font_spec ~slant ~weight family in
       let mat1 = Cairo.Matrix.init_scale size ~-.size in
       let mat2 = Cairo.Matrix.init_identity () in
       let opts = Cairo.Font_options.create () in
-      Cairo.Scaled_font.create spec.face mat1 mat2 opts
+      Cairo.Scaled_font.create face mat1 mat2 opts
   | Some font -> font
 
 let create ?(size = 10.0) ?(family = "fixed") ?(slant = Cairo.Upright)
@@ -51,4 +44,5 @@ let create ?(size = 10.0) ?(family = "fixed") ?(slant = Cairo.Upright)
   let mins = Pt.pt (x +. te.x_bearing) (y +. te.y_bearing) in
   let maxs = Pt.(mins + pt te.width te.height) in
   let box = Bbox.box mins maxs in
-  { str; size; font; base; box }
+  let spec = { family; slant; weight; size } in
+  { str; spec; font; base; box }
