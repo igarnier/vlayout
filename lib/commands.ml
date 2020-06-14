@@ -11,6 +11,8 @@ end
 module type S = sig
   type name
 
+  (** A [position] consistsof an assignement of the coordinates
+      [pos] to the symbolic position [relpos] of some bounding box. *)
   type position = { pos : Pt.t; relpos : relpos }
 
   and relpos =
@@ -24,6 +26,7 @@ module type S = sig
     | NorthWest
     | NorthEast
 
+  (** The type of commands. Best not used directly. *)
   type t = { uid : int; desc : desc }
 
   and desc =
@@ -54,15 +57,11 @@ module type S = sig
 
   module Arrow : sig
     type style =
-      { startp : float;
-        (* [0,1] *)
-        endp : float;
-        (* [0,1] *)
-        arrowp : float;
-        (* [0,1] *)
-        legs : float;
-        (* legs length, >= 0 *)
-        angle : float (* legs angle *)
+      { startp : float;  (** [0,1] *)
+        endp : float;  (** [0,1] *)
+        arrowp : float;  (** [0,1] *)
+        legs : float;  (** legs length, >= 0 *)
+        angle : float  (** legs angle *)
       }
 
     val default_style : style
@@ -77,34 +76,52 @@ module type S = sig
     val mk_multisegment_arrow : style:style -> points:Pt.t list -> t list
   end
 
+  (** Draws a circle with [center] and [radius] parameters. *)
   val circle : center:Pt.t -> radius:float -> t
 
+  (** Draws a box with [mins] as bottom-left corner and [maxs] as the
+      top-right corner. *)
   val box : mins:Pt.t -> maxs:Pt.t -> t
 
+  (** Draws text at position [pos], with size [float] and [text]. *)
   val text : pos:position -> size:float -> text:string -> t
 
+  (** Applies a [style] to the given subcommand. *)
   val style : style:Style.t -> t -> t
 
+  (** Draws a segment from [p1] to [p2] *)
   val segment : p1:Pt.t -> p2:Pt.t -> t
 
+  (** Draws a Bezier curve from [p1] to [p2] with control points
+      respectively [c1] and [c2]. *)
   val bezier : p1:Pt.t -> c1:Pt.t -> p2:Pt.t -> c2:Pt.t -> t
 
+  (** Draws a Bezier curve with ingoing and outgoing angles specified by
+      [angle]. *)
   val ubezier : p1:Pt.t -> p2:Pt.t -> angle:float -> t
 
+  (** Draws an image. *)
   val image : pos:Pt.t -> image:Image.t -> t
 
+  (** Declares an anchor named [name] at position [pt]. *)
   val declpt : pt:Pt.t -> name:name -> t
 
+  (** Rotates the subcommand by [radians]. *)
   val rotate : radians:float -> t -> t
 
+  (** Translates the subcommand by [v]. *)
   val translate : v:Pt.t -> t -> t
 
+  (** Scales the x and y components of the subcommand by resp. [xs] and [ys]. *)
   val scale : xs:float -> ys:float -> t -> t
 
+  (** Wraps a list of subcommands into one. *)
   val wrap : t list -> t
 
+  (** Manual positioning of a the subcommand at the given position.. *)
   val place : pos:position -> t -> t
 
+  (** Pretty-printing of commands *)
   val pp : Format.formatter -> t -> unit
 
   val center_to_page : float * float -> t -> t
@@ -113,26 +130,38 @@ module type S = sig
 
   val collect_declared_points : t -> Pt.t NameMap.t
 
+  (** Relative positioning of horizontal layout boxes. *)
   type hposition = [ `Hcentered | `Bottom | `Top ]
 
+  (** Relative positioning of vertical layout boxes. *)
   type vposition = [ `Vcentered | `Left | `Right ]
+
+  (** A [framing] rule specifies how a sublayout should be rescaled
+      to fit in a given [frame]. *)
+  type framing =
+    | Scale_to_frame of { frame : Bbox.t }
+    | Preserve_aspect of { frame : Bbox.t }
 
   type layout
 
+  (** Embeds a command as part of a layout. *)
   val cmd : t -> layout
 
+  (** [hbox ~pos ~deltax layouts] automatically moves the sub-layout
+      so that they are horizontally aligned, with [deltax] units between
+      each layout bounding box, and using [pos] for alignement. *)
   val hbox : ?pos:hposition -> ?deltax:float -> layout list -> layout
 
+  (** See [hbox]. *)
   val vbox : ?pos:vposition -> ?deltay:float -> layout list -> layout
 
   val arrow : start:name -> finish:name -> sty:Arrow.style -> layout -> layout
 
-  (* val smart_arrow : start:name -> finish:name -> sty:Arrow.style -> layout -> layout                                   *)
+  val frame : framing -> layout -> layout
+
   val emit_commands_with_bbox : layout -> t * Bbox.t
 
   val emit_commands : layout -> t
-
-  (* val emit_commands_centered : float * float -> layout -> t list *)
 end
 
 module Make (N : Name_sig) : S with type name = N.t = struct
@@ -582,11 +611,36 @@ module Make (N : Name_sig) : S with type name = N.t = struct
 
   type vposition = [ `Vcentered | `Left | `Right ]
 
+  type framing =
+    | Scale_to_frame of { frame : Bbox.t }
+    | Preserve_aspect of { frame : Bbox.t }
+
+  (* let pp_framing fmtr = function
+   *   | Scale_to_frame { frame } ->
+   *       Format.fprintf fmtr "Scale_to_frame(%a)" Bbox.pp frame
+   *   | Preserve_aspect { frame } ->
+   *       Format.fprintf fmtr "Preserve_aspect(%a)" Bbox.pp frame *)
+
   type layout =
     | Cmd of t
     | Hbox of { pos : hposition; deltax : float; layouts : layout list }
     | Vbox of { pos : vposition; deltay : float; layouts : layout list }
     | Arrow of { arrow : Arrow.t; layout : layout }
+    | Frame of { framing : framing; layout : layout }
+
+  (*     | Frame { framing; _ } -> (
+   *         match framing with
+   *         | Scale_to_frame { frame } | Preserve_aspect { frame } -> frame )
+   *
+   *     | Frame { framing; cmd } ->
+   *         fprintf fmtr "Frame(%a, %a)" pp_framing framing pp cmd)
+   *
+   *   | Frame { framing; _ } -> (
+   *       match framing with
+   *       | Scale_to_frame { frame } | Preserve_aspect { frame } ->
+   *           Bbox.center frame )
+   *
+   * let frame framing cmd = mktag (Frame { framing; cmd }) *)
 
   (* an arrow makes only sense wrt point declared in a sublayout *)
 
@@ -605,6 +659,8 @@ module Make (N : Name_sig) : S with type name = N.t = struct
       { arrow = Arrow.{ start = s; finish = f; style = sty; smart = false };
         layout = cmd
       }
+
+  let frame framing layout = Frame { framing; layout }
 
   (* let smart_arrow *)
   (*     ~start:(s : name) *)
@@ -764,14 +820,47 @@ module Make (N : Name_sig) : S with type name = N.t = struct
         (* else *)
         let arrow = Arrow.mkarrow ~style ~start:s ~finish:f in
         (wrap (cmd :: arrow), Bbox.join (Bbox.of_commands arrow) bbox)
-
-  (* let ls = List.map emit_commands_with_bbox ls in *)
+    | Frame { framing; layout } -> (
+        let (cmd, bbox) = emit_commands_with_bbox layout in
+        match framing with
+        | Scale_to_frame { frame } ->
+            let frame_width = Bbox.width frame in
+            let frame_height = Bbox.height frame in
+            let pw = Bbox.width bbox in
+            let ph = Bbox.height bbox in
+            let xx = frame_width /. pw in
+            let yy = frame_height /. ph in
+            let (x0, y0) = Gg.V2.to_tuple (Bbox.sw bbox) in
+            let x0 = x0 *. xx in
+            let y0 = y0 *. yy in
+            ( translate
+                ~v:Pt.(sub (Bbox.sw frame) (pt x0 y0))
+                (scale ~xs:xx ~ys:yy cmd),
+              frame )
+        | Preserve_aspect { frame } ->
+            let frame_width = Bbox.width frame in
+            let frame_height = Bbox.height frame in
+            let pw = Bbox.width bbox in
+            let ph = Bbox.height bbox in
+            let xx = frame_width /. pw in
+            let yy = frame_height /. ph in
+            (* compute smallest scaling such that the figure fits in the
+               frame *)
+            let (scaling, direction) =
+              if xx >= 1.0 && yy >= 1.0 then
+                if xx < yy then (1. /. xx, `Horizontal)
+                else (1. /. yy, `Vertical)
+              else if xx < yy then (xx, `Horizontal)
+              else (yy, `Vertical)
+            in
+            let position =
+              match direction with
+              | `Horizontal -> { pos = Bbox.w frame; relpos = West }
+              | `Vertical -> { pos = Bbox.s frame; relpos = South }
+            in
+            (place ~pos:position (scale ~xs:scaling ~ys:scaling cmd), frame) )
 
   let emit_commands l =
     let (cmds, _bbox) = emit_commands_with_bbox l in
     cmds
-
-  (* let emit_commands_centered (w,h) l = *)
-  (*   let (cmds, bbox) = emit_commands_with_bbox l in *)
-  (*   center_to_page (w,h) cmds *)
 end

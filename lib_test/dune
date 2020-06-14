@@ -1,5 +1,5 @@
 (executables
- (names mondrian)
+ (names mondrian framing)
  (libraries vlayout cairo2))
 
 (rule
