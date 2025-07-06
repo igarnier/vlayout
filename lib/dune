@@ -2,4 +2,4 @@
  (name        vlayout)
  (public_name vlayout)
  (modules tools color image style pt bbox ctext commands backends vlayout)
- (libraries cairo2 gg vg))
+ (libraries cairo2 gg))

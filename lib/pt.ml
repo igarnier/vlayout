@@ -1,6 +1,6 @@
 open Gg
 
-type t = p2
+type t = v2
 
 let zero = P2.o
 

@@ -10,7 +10,7 @@ let empty_box clr width height =
       ~fill:None
       ~dash:None
   in
-  C.style ~style (C.box ~mins:Pt.zero ~maxs:(Pt.pt width height))
+  C.style style (C.box ~mins:Pt.zero ~maxs:(Pt.pt width height))
 
 let filled_box stroke_clr filled_clr width height =
   let style =
@@ -20,7 +20,7 @@ let filled_box stroke_clr filled_clr width height =
       ~fill:(Some (Style.solid_stroke ~clr:filled_clr))
       ~dash:None
   in
-  C.style ~style (C.box ~mins:Pt.zero ~maxs:(Pt.pt width height))
+  C.style style (C.box ~mins:Pt.zero ~maxs:(Pt.pt width height))
 
 let hgradient_box clr1 clr2 width height =
   let style =
@@ -30,7 +30,7 @@ let hgradient_box clr1 clr2 width height =
       ~fill:(Some (Style.simple_horizontal_gradient ~clr1 ~clr2))
       ~dash:None
   in
-  C.style ~style (C.box ~mins:Pt.zero ~maxs:(Pt.pt width height))
+  C.style style (C.box ~mins:Pt.zero ~maxs:(Pt.pt width height))
 
 let vgradient_box clr1 clr2 width height =
   let style =
@@ -40,7 +40,7 @@ let vgradient_box clr1 clr2 width height =
       ~fill:(Some (Style.simple_vertical_gradient ~clr1 ~clr2))
       ~dash:None
   in
-  C.style ~style (C.box ~mins:Pt.zero ~maxs:(Pt.pt width height))
+  C.style style (C.box ~mins:Pt.zero ~maxs:(Pt.pt width height))
 
 let vgradient_circle clr1 clr2 radius =
   let style =
@@ -50,7 +50,7 @@ let vgradient_circle clr1 clr2 radius =
       ~fill:(Some (Style.simple_vertical_gradient ~clr1 ~clr2))
       ~dash:None
   in
-  C.style ~style (C.circle ~center:Pt.zero ~radius)
+  C.style style (C.circle Pt.zero radius)
 
 let hgradient_circle clr1 clr2 radius =
   let style =
@@ -60,7 +60,7 @@ let hgradient_circle clr1 clr2 radius =
       ~fill:(Some (Style.simple_horizontal_gradient ~clr1 ~clr2))
       ~dash:None
   in
-  C.style ~style (C.circle ~center:Pt.zero ~radius)
+  C.style style (C.circle Pt.zero radius)
 
 let random_color () =
   let r = Random.float 1.0 in
@@ -110,42 +110,38 @@ let random_scaling cmd =
   C.scale ~xs ~ys cmd
 
 let rec random_layout depth =
-  if depth = 0 then C.cmd (random_rotation (random_scaling (random_box ())))
+  if depth = 0 then random_rotation (random_scaling (random_box ()))
   else
     let l1 = random_layout (depth - 1) in
     let l2 = random_layout (depth - 1) in
-    if Random.bool () then C.hbox ~deltax:10.0 [l1; l2]
-    else C.vbox ~deltay:10.0 [l1; l2]
+    if Random.bool () then C.hbox ~dx:10.0 [l1; l2] else C.vbox ~dy:10.0 [l1; l2]
 
 let _ = Random.init 19
 
 let commands = random_layout 7
 
-let _commands =
-  let t =
-    C.text ~pos:{ C.pos = Pt.pt 0.0 0.0; relpos = West } ~size:5.0 ~text:"test"
-  in
-  let b = C.box ~mins:(Pt.pt 0.0 0.0) ~maxs:(Pt.pt 10.0 10.0) in
-  C.(cmd (wrap [t; b]))
+(* let _commands = *)
+(*   let t = C.text ~size:5.0 { C.pos = Pt.pt 0.0 0.0; relpos = West } "test" in *)
+(*   let b = C.box ~mins:(Pt.pt 0.0 0.0) ~maxs:(Pt.pt 10.0 10.0) in *)
+(*   C.(group [t; b]) *)
 
-let _commands =
-  let pos = { C.pos = Pt.pt 0.0 0.0; relpos = NorthEast } in
-  let text = C.text ~pos ~size:35.0 ~text:"test" in
-  let bbox = C.Bbox.of_command text in
-  let pos = C.text_position pos (Bbox.width bbox) (Bbox.height bbox) in
-  C.cmd
-    (C.wrap
-       [ text;
-         C.box ~mins:(C.Bbox.sw bbox) ~maxs:(C.Bbox.ne bbox);
-         C.circle ~center:Pt.zero ~radius:10.0;
-         C.circle ~center:pos ~radius:5.0;
-         (* C.text  ~pos:{ C.pos = Pt.pt 0.0 50.0; relpos = South } ~width:40.0 ~height:10.0 ~text:"test"; *)
-         C.box ~mins:(Pt.pt ~-.90.0 ~-.90.0) ~maxs:(Pt.pt 90. 90.) ])
+(* let _commands = *)
+(*   let pos = { C.pos = Pt.pt 0.0 0.0; relpos = NorthEast } in *)
+(*   let text = C.text ~size:35.0 pos "test" in *)
+(*   let bbox = C.bbox text in *)
+(*   let pos = C.text_position pos (Bbox.width bbox) (Bbox.height bbox) in *)
+(*   C.group *)
+(*     [ text; *)
+(*       C.box ~mins:(Bbox.sw bbox) ~maxs:(Bbox.ne bbox); *)
+(*       C.circle Pt.zero 10.0; *)
+(*       C.circle pos 5.0; *)
+(*       (\* C.text  ~pos:{ C.pos = Pt.pt 0.0 50.0; relpos = South } ~width:40.0 ~height:10.0 ~text:"test"; *\) *)
+(*       C.box ~mins:(Pt.pt ~-.90.0 ~-.90.0) ~maxs:(Pt.pt 90. 90.) ] *)
 
 let process_layout xmargin ymargin layout =
-  let (cmds, bbox) = C.emit_commands_with_bbox layout in
+  let bbox = C.bbox layout in
   let w = xmargin +. Bbox.width bbox and h = ymargin +. Bbox.height bbox in
-  (C.center_to_page (w, h) cmds, w, h)
+  (C.center_to_page ~w ~h layout, w, h)
 
 let display_pdf filename layout =
   let (layout, w, h) = process_layout 10.0 10.0 layout in

@@ -27,14 +27,19 @@ let display_pdf filename layout =
   B.render ctx layout ;
   Cairo.Surface.finish cairo_surface
 
-let eyes =
+let test =
   let open C in
-  hbox ~pos:`Hcentered ~dx:10.0 [circle Pt.zero 50.0; circle Pt.zero 50.0]
+  let cmd =
+    hbox
+      ~dx:10.0
+      [ group [anchor "a" Pt.zero @@ circle Pt.zero 50.0];
+        circle Pt.zero 50.0;
+        group [anchor "b" Pt.zero @@ circle Pt.zero 50.0] ]
+  in
+  group
+    [ cmd;
+      ( bind_each "a" cmd @@ fun a ->
+        bind_each "b" cmd @@ fun b ->
+        arrow ~style:Arrow.default_style ~start:a ~finish:b ) ]
 
-let put_in_box frame commands = C.frame (C.Preserve_aspect { frame }) commands
-
-let commands =
-  let box = Bbox.of_points [Pt.zero; Pt.pt 200.0 150.0] in
-  C.group [put_in_box box eyes; C.box ~mins:(Bbox.sw box) ~maxs:(Bbox.ne box)]
-
-let _ = display_pdf "framing.pdf" commands
+let _ = display_pdf "arrow.pdf" test

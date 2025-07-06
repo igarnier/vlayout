@@ -139,7 +139,7 @@ module Cairo = struct
           Cairo.restore ctx ;
           perform_stroke_and_fill_opt ctx fill_opt
     | Style { style; cmd } ->
-        let bbox = Commands.Bbox.of_command cmd in
+        let bbox = cmd.bbox in
         let adjusted_fill = adjust_fill_to_bbox bbox style.Style.fill in
         Cairo.save ctx ;
         set_pattern ctx style.Style.stroke ;
@@ -164,7 +164,7 @@ module Cairo = struct
           perform_stroke_and_fill_opt ctx fill_opt)
     | Image { pos = _; image } ->
         Cairo.save ctx ;
-        let bbox = Commands.Bbox.of_command cmd in
+        let bbox = cmd.bbox in
         let () =
           Cairo.rectangle
             ctx
@@ -195,7 +195,6 @@ module Cairo = struct
         Cairo.set_source ctx patt ;
         Cairo.paint ctx ;
         Cairo.restore ctx
-    | DeclPt { pt = _; name = _ } -> ()
     | Rotate { radians; cmd } ->
         Cairo.save ctx ;
         Cairo.rotate ctx radians ;
@@ -211,7 +210,7 @@ module Cairo = struct
         Cairo.scale ctx xs ys ;
         render ctx fill_opt cmd ;
         Cairo.restore ctx
-    | Wrap subcommands -> List.iter (render ctx fill_opt) subcommands
+    | Group subcommands -> List.iter (render ctx fill_opt) subcommands
 
   let render ctx cmd = render ctx None cmd
 end
@@ -388,7 +387,7 @@ end
 (*         Cairo.set_source ctx patt ; *)
 (*         Cairo.paint ctx ; *)
 (*         Cairo.restore ctx *)
-(*     | DeclPt { pt = _; name = _ } -> Vg.I.void *)
+(*     | Anchor { pt = _; name = _ } -> Vg.I.void *)
 (*     | Rotate { radians; cmd } -> *)
 (*         render (Gg.M3.mul (Gg.M3.rot2 radians) ctx) fill_opt cmd *)
 (*     | Translate { v; cmd } -> *)

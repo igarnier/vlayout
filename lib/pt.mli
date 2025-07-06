@@ -1,4 +1,4 @@
-type t = Gg.P2.t
+type t = Gg.v2
 
 val zero : t
 
