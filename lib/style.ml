@@ -1,10 +1,9 @@
 type pattern =
   | Solid of { c : Color.t }
   | Linear of { p0 : Pt.t; p1 : Pt.t; stops : color_stops }
-  | Radial of
-      { c0 : Pt.t; r0 : float; c1 : Pt.t; r1 : float; stops : color_stops }
+  | Radial of { c0 : Pt.t; c1 : Pt.t; r1 : float; stops : color_stops }
 
-and color_stops = (Color.t * float) list
+and color_stops = Gg.Color.stops
 
 type dash_pattern = float array
 
@@ -18,7 +17,7 @@ type t =
 let pp_comma fmtr () = Format.pp_print_string fmtr ","
 
 let pp_pattern fmtr = function
-  | Solid { c } -> Format.fprintf fmtr "Solid %a" Color.pp c
+  | Solid { c } -> Format.fprintf fmtr "Solid %a" Gg.V4.pp c
   | Linear { p0; p1; stops } ->
       Format.fprintf
         fmtr
@@ -27,21 +26,20 @@ let pp_pattern fmtr = function
         p0
         Pt.pp
         p1
-        (Format.pp_print_list ~pp_sep:pp_comma (fun fmtr (c, ofs) ->
-             Format.fprintf fmtr "%a at %f" Color.pp c ofs))
+        (Format.pp_print_list ~pp_sep:pp_comma (fun fmtr (ofs, c) ->
+             Format.fprintf fmtr "%a at %f" Gg.V4.pp c ofs))
         stops
-  | Radial { c0; r0; c1; r1; stops } ->
+  | Radial { c0; c1; r1; stops } ->
       Format.fprintf
         fmtr
-        "@[Radial { c0 = %a; r0 = %f; c1 = %a; r1 = %f; stops = %a }@]"
+        "@[Radial { c0 = %a; c1 = %a; r1 = %f; stops = %a }@]"
         Pt.pp
         c0
-        r0
         Pt.pp
         c1
         r1
-        (Format.pp_print_list ~pp_sep:pp_comma (fun fmtr (c, ofs) ->
-             Format.fprintf fmtr "%a at %f" Color.pp c ofs))
+        (Format.pp_print_list ~pp_sep:pp_comma (fun fmtr (ofs, c) ->
+             Format.fprintf fmtr "%a at %f" Gg.V4.pp c ofs))
         stops
 
 let pp_dash_pattern fmtr dash_pattern =
@@ -100,13 +98,13 @@ let horizontal_gradient ~path =
 let simple_vertical_gradient ~clr1 ~clr2 =
   let p0 = Pt.pt 0.0 0.0 in
   let p1 = Pt.pt 0.0 1.0 in
-  let stops = [(clr1, 0.0); (clr2, 1.0)] in
+  let stops = [(0.0, clr1); (1.0, clr2)] in
   Linear { p0; p1; stops }
 
 let simple_horizontal_gradient ~clr1 ~clr2 =
   let p0 = Pt.pt 0.0 0.0 in
   let p1 = Pt.pt 1.0 0.0 in
-  let stops = [(clr1, 0.0); (clr2, 1.0)] in
+  let stops = [(0.0, clr1); (1.0, clr2)] in
   Linear { p0; p1; stops }
 
 let solid clr =
@@ -121,7 +119,7 @@ module Solid = struct
 
   let blue = solid blue
 
-  let gray p = solid (gray p)
+  let gray p = solid (Gg.Color.gray p)
 
   let black = solid black
 

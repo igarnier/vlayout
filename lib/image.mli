@@ -1,6 +1,8 @@
+(** The type of images. *)
 type t
 
-val create : int -> int -> t
+(** [create ~xsize ~ysize] is an image with prescribed size. *)
+val create : xsize:int -> ysize:int -> t
 
 val xsize : t -> int
 

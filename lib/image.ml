@@ -1,10 +1,14 @@
+open Gg
+
 type t =
   { pixels : (int32, Bigarray.int32_elt, Bigarray.c_layout) Bigarray.Array1.t;
     xsize : int;
     ysize : int
   }
 
-let create xsize ysize =
+let create ~xsize ~ysize =
+  if xsize < 1 || ysize < 1 then
+    invalid_arg "Image.create: xsize and ysize must be at least 1" ;
   let pixels =
     Bigarray.Array1.create Bigarray.int32 Bigarray.c_layout (xsize * ysize)
   in
@@ -17,7 +21,7 @@ let ysize { ysize; _ } = ysize
 let pixels { pixels; _ } = pixels
 
 let bbox { xsize; ysize; _ } =
-  Bbox.box Pt.zero (Pt.pt (float xsize) (float ysize))
+  Box2.of_pts Pt.zero (Pt.pt (float xsize) (float ysize))
 
 let get { pixels; xsize; ysize = _ } x y = pixels.{(y * xsize) + x}
 

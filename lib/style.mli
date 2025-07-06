@@ -2,15 +2,14 @@
 type pattern =
   | Solid of { c : Color.t }
   | Linear of { p0 : Pt.t; p1 : Pt.t; stops : color_stops }
-  | Radial of
-      { c0 : Pt.t; r0 : float; c1 : Pt.t; r1 : float; stops : color_stops }
+  | Radial of { c0 : Pt.t; c1 : Pt.t; r1 : float; stops : color_stops }
 
 (** A path in Color.t space where each Color.t is weighted by a value in [0,1].
     As an example, [ (red, 0.0); (blue, 0.5); (red, 1.0) ] corresponds to a path
     that starts and finishes by red, going halfway through by blue. The
     intermediate values taken by the path depend on the kind of gradient
     algorithm used. *)
-and color_stops = (Color.t * float) list
+and color_stops = Gg.Color.stops
 
 (** A [dash_pattern] specifies a dash (see Cairo doc). *)
 type dash_pattern = float array

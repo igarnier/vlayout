@@ -1,16 +1,6 @@
 open Vlayout
-
-(* We won't be using names for this example. *)
-module Name = struct
-  type t = unit
-
-  let compare _ _ = 0
-
-  let pp fmtr () = Format.pp_print_string fmtr "()"
-end
-
-module C = Commands.Make (Name)
-module B = Backends.Cairo (C)
+module C = Commands
+module B = Backends.Cairo
 
 let empty_box clr width height =
   let style =
