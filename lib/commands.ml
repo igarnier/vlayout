@@ -11,8 +11,8 @@ end
 module type S = sig
   type name
 
-  (** A [position] consistsof an assignement of the coordinates
-      [pos] to the symbolic position [relpos] of some bounding box. *)
+  (** A [position] consistsof an assignement of the coordinates [pos] to the
+      symbolic position [relpos] of some bounding box. *)
   type position = { pos : Pt.t; relpos : relpos }
 
   and relpos =
@@ -79,8 +79,8 @@ module type S = sig
   (** Draws a circle with [center] and [radius] parameters. *)
   val circle : center:Pt.t -> radius:float -> t
 
-  (** Draws a box with [mins] as bottom-left corner and [maxs] as the
-      top-right corner. *)
+  (** Draws a box with [mins] as bottom-left corner and [maxs] as the top-right
+      corner. *)
   val box : mins:Pt.t -> maxs:Pt.t -> t
 
   (** Draws text at position [pos], with size [float] and [text]. *)
@@ -92,8 +92,8 @@ module type S = sig
   (** Draws a segment from [p1] to [p2] *)
   val segment : p1:Pt.t -> p2:Pt.t -> t
 
-  (** Draws a Bezier curve from [p1] to [p2] with control points
-      respectively [c1] and [c2]. *)
+  (** Draws a Bezier curve from [p1] to [p2] with control points respectively
+      [c1] and [c2]. *)
   val bezier : p1:Pt.t -> c1:Pt.t -> p2:Pt.t -> c2:Pt.t -> t
 
   (** Draws a Bezier curve with ingoing and outgoing angles specified by
@@ -136,8 +136,8 @@ module type S = sig
   (** Relative positioning of vertical layout boxes. *)
   type vposition = [ `Vcentered | `Left | `Right ]
 
-  (** A [framing] rule specifies how a sublayout should be rescaled
-      to fit in a given [frame]. *)
+  (** A [framing] rule specifies how a sublayout should be rescaled to fit in a
+      given [frame]. *)
   type framing =
     | Scale_to_frame of { frame : Bbox.t }
     | Preserve_aspect of { frame : Bbox.t }
@@ -147,9 +147,9 @@ module type S = sig
   (** Embeds a command as part of a layout. *)
   val cmd : t -> layout
 
-  (** [hbox ~pos ~deltax layouts] automatically moves the sub-layout
-      so that they are horizontally aligned, with [deltax] units between
-      each layout bounding box, and using [pos] for alignement. *)
+  (** [hbox ~pos ~deltax layouts] automatically moves the sub-layout so that
+      they are horizontally aligned, with [deltax] units between each layout
+      bounding box, and using [pos] for alignement. *)
   val hbox : ?pos:hposition -> ?deltax:float -> layout list -> layout
 
   (** See [hbox]. *)
@@ -215,8 +215,14 @@ module Make (N : Name_sig) : S with type name = N.t = struct
   let ubezier_control_points ~p1 ~p2 ~angle =
     let delta = Pt.sub p2 p1 and n_angle = Pt.angle_of_vec (p1, p2) in
     let hdist = 0.3 *. Pt.norm delta in
-    let out_angle = n_angle +. angle (* +. angle *) in
-    let in_angle = n_angle -. angle (* +. Tools.pi *. 0.5 -. angle *) in
+    let out_angle =
+      n_angle +. angle
+      (* +. angle *)
+    in
+    let in_angle =
+      n_angle -. angle
+      (* +. Tools.pi *. 0.5 -. angle *)
+    in
     let vec1 = Pt.scale (Pt.pt (cos out_angle) (sin out_angle)) hdist in
     let vec2 = Pt.scale (Pt.pt (cos in_angle) (sin in_angle)) ~-.hdist in
     let c1 = Pt.add p1 vec1 in
@@ -858,7 +864,7 @@ module Make (N : Name_sig) : S with type name = N.t = struct
               | `Horizontal -> { pos = Bbox.w frame; relpos = West }
               | `Vertical -> { pos = Bbox.s frame; relpos = South }
             in
-            (place ~pos:position (scale ~xs:scaling ~ys:scaling cmd), frame) )
+            (place ~pos:position (scale ~xs:scaling ~ys:scaling cmd), frame))
 
   let emit_commands l =
     let (cmds, _bbox) = emit_commands_with_bbox l in

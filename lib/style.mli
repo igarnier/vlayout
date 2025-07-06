@@ -6,20 +6,19 @@ type pattern =
       { c0 : Pt.t; r0 : float; c1 : Pt.t; r1 : float; stops : color_stops }
 
 (** A path in Color.t space where each Color.t is weighted by a value in [0,1].
-    As an example, [ (red, 0.0); (blue, 0.5); (red, 1.0) ] corresponds to
-    a path that starts and finishes by red, going halfway through by blue.
-    The intermediate values taken by the path depend on the kind of gradient
+    As an example, [ (red, 0.0); (blue, 0.5); (red, 1.0) ] corresponds to a path
+    that starts and finishes by red, going halfway through by blue. The
+    intermediate values taken by the path depend on the kind of gradient
     algorithm used. *)
 and color_stops = (Color.t * float) list
 
 (** A [dash_pattern] specifies a dash (see Cairo doc). *)
 type dash_pattern = float array
 
-(** A style describes how to paint a surface enclosed by a path.
-    The [stroke] field describes the enclosing path and is mandatory.
-    [width] and [dash] optionally describe the width and the dash pattern
-    of the stroke, while the optional [fill] field describes how the enclosed
-    surface must be drawn. *)
+(** A style describes how to paint a surface enclosed by a path. The [stroke]
+    field describes the enclosing path and is mandatory. [width] and [dash]
+    optionally describe the width and the dash pattern of the stroke, while the
+    optional [fill] field describes how the enclosed surface must be drawn. *)
 type t =
   { stroke : pattern;
     width : float option;

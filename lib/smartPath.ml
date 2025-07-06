@@ -136,41 +136,41 @@ let solution shift box pb orient =
       match orient with
       | DownRight -> (w', a_sol, s')
       | UpLeft -> (s', a_sol, w')
-      | _ -> failwith "orientation error : SW" )
+      | _ -> failwith "orientation error : SW")
   | (SE, s, e) -> (
       let s' = south_sol s in
       let e' = east_sol e in
       match orient with
       | UpRight -> (s', b_sol, e')
       | DownLeft -> (e', b_sol, s')
-      | _ -> failwith "orientation error : SE" )
+      | _ -> failwith "orientation error : SE")
   | (NW, n, w) -> (
       let w' = west_sol w in
       let n' = north_sol n in
       match orient with
       | UpRight -> (w', c_sol, n')
       | DownLeft -> (n', c_sol, w')
-      | _ -> failwith "orientation error : NW" )
+      | _ -> failwith "orientation error : NW")
   | (NE, n, e) -> (
       let n' = north_sol n in
       let e' = east_sol e in
       match orient with
       | DownRight -> (n', d_sol, e')
       | UpLeft -> (e', d_sol, n')
-      | _ -> failwith "orientation error : NE" )
+      | _ -> failwith "orientation error : NE")
   | (NS, _n, _s) -> (
       (* let n' = north_sol n in
          let s' = south_sol s in*)
       (* This heuristic might not be very adapted in general *)
       match orient with
       | UpRight | UpLeft -> (b_sol, barycenter b_sol d_sol, d_sol)
-      | _ -> (c_sol, barycenter c_sol a_sol, a_sol) )
+      | _ -> (c_sol, barycenter c_sol a_sol, a_sol))
   | (WE, _w, _e) -> (
       (* let w' = west_sol w in
          let e' = east_sol e in *)
       match orient with
       | UpRight | DownRight -> (c_sol, barycenter c_sol d_sol, d_sol)
-      | _ -> (b_sol, barycenter b_sol a_sol, a_sol) )
+      | _ -> (b_sol, barycenter b_sol a_sol, a_sol))
 
 let rec solve shift ((origin, target) as segment) boxes =
   let boxes = sort_boxes_by_dist origin boxes in
@@ -184,6 +184,6 @@ let rec solve shift ((origin, target) as segment) boxes =
           let (p1, p2, new_origin) =
             solution shift box pb (orient_of_segment segment)
           in
-          origin :: p1 :: p2 :: solve shift (new_origin, target) boxes )
+          origin :: p1 :: p2 :: solve shift (new_origin, target) boxes)
 
 let produce_path shift start finish bboxes = solve shift (start, finish) bboxes

@@ -1,12 +1,3 @@
-(executables
+(tests
  (names mondrian framing)
  (libraries vlayout cairo2))
-
-(rule
- (targets mondrian.pdf)
-  (action (with-stdout-to ${@} (run ${test:mondrian.exe}))))
-
-(alias
- (name runtest)
-  (deps    (:exe mondrian.exe))
-  (action (run %{exe})))

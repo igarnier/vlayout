@@ -1,0 +1,20 @@
+(lang dune 3.0)
+(name vlayout)
+(version 0.0.2)
+(generate_opam_files true)
+(source (uri git+https://github.com/igarnier/vlayout))
+(bug_reports http://github.com/igarnier/vlayout)
+(homepage http://github.com/igarnier/vlayout)
+(authors "Ilias Garnier")
+(maintainers "igarnier@protonmail.com")
+(implicit_transitive_deps false)
+
+(package
+ (name vlayout)
+ (synopsis "Structured vector layout")
+ (description "Structured vector layout")
+ (license MIT)
+ (tags (graphics))
+ (depends
+  (ocaml (>= 4.14))
+  (tsdl (>= 1.1.0))))

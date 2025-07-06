@@ -2,7 +2,8 @@ module type S = sig
   (** Type of 2d bounding boxes. *)
   type t = Gg.Box2.t
 
-  (** [box p1 p2] creates a bounding box wih [p1] being the lower left corner and [p2] being the upper right corner. *)
+  (** [box p1 p2] creates a bounding box wih [p1] being the lower left corner
+      and [p2] being the upper right corner. *)
   val box : Pt.t -> Pt.t -> t
 
   (** The empty bounding box. *)
@@ -17,7 +18,8 @@ module type S = sig
   (** Returns the height of a bounding box. *)
   val height : t -> float
 
-  (** [join b1 b2] returns the smallest bounding box enclosing both [b1] and [b2]. *)
+  (** [join b1 b2] returns the smallest bounding box enclosing both [b1] and
+      [b2]. *)
   val join : t -> t -> t
 
   (** [translate v b] translates the box [b] by the vector [v] *)
@@ -32,8 +34,8 @@ module type S = sig
   (** Enlarges a box by given scale factors on the x and y axes. *)
   val enlarge : float -> float -> t -> t
 
-  (** of_points l returns the smallest bounding box enclosing the list
-      of points l *)
+  (** of_points l returns the smallest bounding box enclosing the list of points
+      l *)
   val of_points : Pt.t list -> t
 
   (** Same as [of_points], taking an array instead of a list *)

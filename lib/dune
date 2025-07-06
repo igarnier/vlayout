@@ -3,9 +3,3 @@
  (public_name vlayout)
  (modules tools color image style pt bbox ctext commands backends vlayout)
  (libraries cairo2 gg))
-
-(library
- (name        vlayout_encodings)
- (public_name vlayout-encodings)
- (modules vlayout_encodings)
- (libraries vlayout data-encoding))

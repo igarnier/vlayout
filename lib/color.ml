@@ -39,7 +39,7 @@ let enum_colors =
     if !i < len then (
       let res = colors.(!i) in
       incr i ;
-      res )
+      res)
     else
       let res = sample_around colors.(!i) in
       incr i ;

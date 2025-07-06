@@ -85,7 +85,7 @@ module Cairo (C : Commands.S) = struct
             let c1 = Pt.pt x1 y1 in
             let r0 = r0 *. w in
             let r1 = r1 *. w in
-            Some (Style.Radial { c0; r0; c1; r1; stops }) )
+            Some (Style.Radial { c0; r0; c1; r1; stops }))
 
   let render_box ctx mins maxs =
     let open Pt in
@@ -144,12 +144,12 @@ module Cairo (C : Commands.S) = struct
         let adjusted_fill = adjust_fill_to_bbox bbox style.Style.fill in
         Cairo.save ctx ;
         set_pattern ctx style.Style.stroke ;
-        ( match style.dash with
+        (match style.dash with
         | None -> ()
-        | Some patt -> Cairo.set_dash ctx patt ) ;
-        ( match style.width with
+        | Some patt -> Cairo.set_dash ctx patt) ;
+        (match style.width with
         | None -> ()
-        | Some width -> Cairo.set_line_width ctx width ) ;
+        | Some width -> Cairo.set_line_width ctx width) ;
         render ctx adjusted_fill cmd ;
         Cairo.restore ctx
     | C.Segment { p1; p2 } ->

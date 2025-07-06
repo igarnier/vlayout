@@ -23,8 +23,9 @@ val pink : t
 
 val cyan : t
 
-(** Enumerating colors. The 8 first colors of the enumeration are those above (except white), the one after
-    that are obtained by sampling around the previous ones. *)
+(** Enumerating colors. The 8 first colors of the enumeration are those above
+    (except white), the one after that are obtained by sampling around the
+    previous ones. *)
 val enum_colors : unit -> t
 
 (** Pack an rgb t into the 24 first bits of an int32. *)
