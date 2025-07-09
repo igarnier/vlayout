@@ -18,10 +18,18 @@ val pink : t
 
 val cyan : t
 
+val gray : float -> t
+
 (** Enumerating colors. The 8 first colors of the enumeration are those above
     (except white), the one after that are obtained by sampling around the
     previous ones. *)
-val enum_colors : t Seq.t
+val enum_colors : unit -> t Seq.t
+
+val r : t -> float
+
+val g : t -> float
+
+val b : t -> float
 
 val unpack : t -> float * float * float
 

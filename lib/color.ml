@@ -18,16 +18,24 @@ let pink = rgb (255. /. 255.) (105. /. 255.) (180. /. 255.)
 
 let cyan = rgb 0.0 (255. /. 255.) (255. /. 255.)
 
+let gray p = Color.gray p
+
 let signed_float f =
   let f = Random.float f in
   if Random.bool () then f else ~-.f
 
 let clamp f = if f < 0.0 then ~-.f else if f > 1.0 then 1.0 -. f else f
 
+let r = Color.r
+
+let g = Color.g
+
+let b = Color.b
+
 let unpack color =
-  let r = Color.r color in
-  let g = Color.g color in
-  let b = Color.b color in
+  let r = r color in
+  let g = g color in
+  let b = b color in
   (r, g, b)
 
 let sample_around color =
@@ -42,7 +50,7 @@ let sample_around color =
   let b = clamp (b +. bdelta) in
   rgb r g b
 
-let enum_colors =
+let enum_colors () =
   let colors = [| red; green; blue; black; pink; cyan |] in
   let len = Array.length colors in
   let i = ref 0 in
@@ -52,7 +60,7 @@ let enum_colors =
     incr i ;
     Some res)
   else
-    let res = sample_around colors.(!i) in
+    let res = sample_around colors.(!i mod len) in
     incr i ;
     Some res
 
