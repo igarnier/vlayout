@@ -17,4 +17,5 @@
  (tags (graphics))
  (depends
   (ocaml (>= 4.14))
-  (tsdl (>= 1.1.0))))
+  (cairo2 (>= 0.6.5))
+  (gg (>= 1.0.0))))

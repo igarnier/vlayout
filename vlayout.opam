@@ -12,7 +12,8 @@ bug-reports: "http://github.com/igarnier/vlayout"
 depends: [
   "dune" {>= "3.0"}
   "ocaml" {>= "4.14"}
-  "tsdl" {>= "1.1.0"}
+  "cairo2" {>= "0.6.5"}
+  "gg" {>= "1.0.0"}
   "odoc" {with-doc}
 ]
 build: [
