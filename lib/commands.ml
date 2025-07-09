@@ -311,8 +311,9 @@ let circle center radius : command =
 let box ~mins ~maxs =
   mktag (Box { mins; maxs }) (Bbox.box mins maxs) Name_map.empty
 
-let text ~size pos text =
+let text ~size relpos pt text =
   let text = Ctext.create ~size text in
+  let pos = { pos = pt; relative_position = relpos } in
   mktag (Text { pos; text }) (Compute_bbox.of_text pos text) Name_map.empty
 
 let style style cmd = mktag (Style { style; cmd }) cmd.bbox cmd.points

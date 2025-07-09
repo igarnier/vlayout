@@ -67,9 +67,9 @@ module Commands : sig
       the top-right corner. *)
   val box : mins:Gg.p2 -> maxs:Gg.p2 -> t
 
-  (** [text ~size pos str] is some text at position [pos], with size [size] and
-      string [str]. *)
-  val text : size:float -> position -> string -> t
+  (** [text ~size relpos pt str] is some text whose bounding box is at [relpos]
+      of a [pt], with size [size] and string [str]. *)
+  val text : size:float -> relative_position -> Gg.p2 -> string -> t
 
   (** [style sty cmd] is [cmd] on which the style [sty] is applied. *)
   val style : Style.t -> t -> t
