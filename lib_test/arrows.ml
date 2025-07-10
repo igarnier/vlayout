@@ -39,7 +39,6 @@ let test =
   group
     [ cmd;
       ( bind_each "a" cmd @@ fun a ->
-        bind_each "b" cmd @@ fun b ->
-        arrow ~style:Arrow.default_style ~start:a ~finish:b ) ]
+        bind_each "b" cmd @@ fun b -> arrow a b ) ]
 
 let _ = display_pdf "arrow.pdf" test

@@ -459,7 +459,7 @@ let frame framing cmd =
       in
       place relative_position point (scale ~xs:scaling ~ys:scaling cmd)
 
-let arrow ~style ~start ~finish =
+let arrow ?(style = Arrow.default_style) start finish =
   let (left_leg, right_leg) =
     Arrow.make_arrow_head
       ~legs_length:style.Arrow.legs
@@ -478,7 +478,7 @@ let arrow ~style ~start ~finish =
       segment arrow_pos right_leg ]
 
 (* let make_arrow legs_length legs_angle start finish = *)
-let arrow_curvy style ~start ~finish ~radians =
+let arrow_curvy ?(style = Arrow.default_style) start finish ~radians =
   if not (List.mem style.Arrow.arrowp [0.0; 0.5; 1.0]) then
     failwith "Commands.make_arrow_curvy: arrowp must be either 0, 0.5 or 1"
   else
@@ -516,7 +516,7 @@ let rec to_segments points =
   | [_] -> []
   | p1 :: p2 :: tl -> (p1, p2) :: to_segments (p2 :: tl)
 
-let segmented_arrow style points =
+let segmented_arrow ?(style = Arrow.default_style) points =
   let segments = to_segments points in
   let segments =
     match segments with

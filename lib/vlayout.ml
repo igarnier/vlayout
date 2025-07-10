@@ -115,17 +115,16 @@ module Commands : sig
   (** [frame framing cmd] frames [cmd] in [framing]. *)
   val frame : framing -> t -> t
 
-  (** [arrow ~style ~start ~finish] creates an arrow with [style] going from
+  (** [arrow ?style start finish] creates an arrow with [style] going from
       [start] to [finish]. *)
-  val arrow : style:Arrow.style -> start:Gg.p2 -> finish:Gg.p2 -> t
+  val arrow : ?style:Arrow.style -> Gg.p2 -> Gg.p2 -> t
 
-  (** [arrow_curvy ~style ~start ~finish] creates an arrow with [style] going
-      from [start] to [finish] whose initial tangent vector has angle [radians]
-      with the line from [start] to [finish]. *)
-  val arrow_curvy :
-    Arrow.style -> start:Gg.p2 -> finish:Gg.p2 -> radians:float -> t
+  (** [arrow_curvy ?style start finish ~radians] creates an arrow with [style]
+      going from [start] to [finish] whose initial tangent vector has angle
+      [radians] with the line from [start] to [finish]. *)
+  val arrow_curvy : ?style:Arrow.style -> Gg.p2 -> Gg.p2 -> radians:float -> t
 
-  val segmented_arrow : Arrow.style -> Gg.p2 list -> t
+  val segmented_arrow : ?style:Arrow.style -> Gg.p2 list -> t
 
   val center_to_page : w:float -> h:float -> t -> t
 
