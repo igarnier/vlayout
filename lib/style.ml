@@ -71,11 +71,19 @@ let pp fmtr { stroke; dash; fill; _ } =
 let make ~stroke ~width ~dash ~fill = { stroke; width; dash; fill }
 
 (** Some predefined stokes and fills. *)
-let solid_stroke ~clr = Solid { c = clr }
+let solid c = Solid { c }
 
-let solid_fill ~clr = Solid { c = clr }
+let linear ~p0 ~p1 stops = Linear { p0; p1; stops }
 
-let with_dash ~style ~dash = { style with dash = Some dash }
+let radial ~c0 ~c1 r1 stops = Radial { c0; c1; r1; stops }
+
+let with_dash dash style = { style with dash = Some dash }
+
+let with_stroke stroke style = { style with stroke }
+
+let with_fill fill style = { style with fill = Some fill }
+
+let with_width width style = { style with width = Some width }
 
 let dot_dash = [| 1.0; 5.0 |]
 
@@ -107,11 +115,11 @@ let simple_horizontal_gradient ~clr1 ~clr2 =
   let stops = [(0.0, clr1); (1.0, clr2)] in
   Linear { p0; p1; stops }
 
-let solid clr =
-  make ~stroke:(Solid { c = clr }) ~width:None ~fill:None ~dash:None
-
 module Solid = struct
   open Color
+
+  let solid clr =
+    make ~stroke:(Solid { c = clr }) ~width:None ~fill:None ~dash:None
 
   let red = solid red
 
@@ -128,50 +136,35 @@ module Solid = struct
   let cyan = solid cyan
 end
 
-module DotDash = struct
-  let red = with_dash ~style:Solid.red ~dash:dot_dash
+module Make_dash (X : sig
+  val dash : dash_pattern
+end) =
+struct
+  open X
 
-  let green = with_dash ~style:Solid.green ~dash:dot_dash
+  let red = with_dash dash Solid.red
 
-  let blue = with_dash ~style:Solid.blue ~dash:dot_dash
+  let green = with_dash dash Solid.green
 
-  let gray p = with_dash ~style:(Solid.gray p) ~dash:dot_dash
+  let blue = with_dash dash Solid.blue
 
-  let black = with_dash ~style:Solid.black ~dash:dot_dash
+  let gray p = with_dash dash (Solid.gray p)
 
-  let pink = with_dash ~style:Solid.pink ~dash:dot_dash
+  let black = with_dash dash Solid.black
 
-  let cyan = with_dash ~style:Solid.cyan ~dash:dot_dash
+  let pink = with_dash dash Solid.pink
+
+  let cyan = with_dash dash Solid.cyan
 end
 
-module MediumDash = struct
-  let red = with_dash ~style:Solid.red ~dash:medium_dash
+module DotDash = Make_dash (struct
+  let dash = dot_dash
+end)
 
-  let green = with_dash ~style:Solid.green ~dash:medium_dash
+module MediumDash = Make_dash (struct
+  let dash = medium_dash
+end)
 
-  let blue = with_dash ~style:Solid.blue ~dash:medium_dash
-
-  let gray p = with_dash ~style:(Solid.gray p) ~dash:medium_dash
-
-  let black = with_dash ~style:Solid.black ~dash:medium_dash
-
-  let pink = with_dash ~style:Solid.pink ~dash:medium_dash
-
-  let cyan = with_dash ~style:Solid.cyan ~dash:medium_dash
-end
-
-module LargeDash = struct
-  let red = with_dash ~style:Solid.red ~dash:large_dash
-
-  let green = with_dash ~style:Solid.green ~dash:large_dash
-
-  let blue = with_dash ~style:Solid.blue ~dash:large_dash
-
-  let gray p = with_dash ~style:(Solid.gray p) ~dash:large_dash
-
-  let black = with_dash ~style:Solid.black ~dash:large_dash
-
-  let pink = with_dash ~style:Solid.pink ~dash:large_dash
-
-  let cyan = with_dash ~style:Solid.cyan ~dash:large_dash
-end
+module LargeDash = Make_dash (struct
+  let dash = large_dash
+end)

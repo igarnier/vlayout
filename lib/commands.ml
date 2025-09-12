@@ -175,6 +175,7 @@ and desc =
   | Rotate of { radians : float; cmd : command }
   | Translate of { v : Pt.t; cmd : command }
   | Scale of { xs : float; ys : float; cmd : command }
+  | Transform of { mat : Gg.M3.t; cmd : command }
   | Group of command list
 
 type t = command
@@ -361,6 +362,10 @@ let scale ~xs ~ys cmd =
   let points = apply_matrix (Gg.M3.scale2 (Gg.V2.v xs ys)) cmd.points in
   mktag (Scale { xs; ys; cmd }) (Bbox.scale xs ys cmd.bbox) points
 
+let transform mat cmd =
+  let points = apply_matrix mat cmd.points in
+  mktag (Transform { mat; cmd }) (Bbox.transform mat cmd.bbox) points
+
 let merge map1 map2 =
   Name_map.union (fun _name p1 p2 -> Some (List.rev_append p1 p2)) map1 map2
 
@@ -480,39 +485,38 @@ let arrow ?(style = Arrow.default_style) start finish =
 (* let make_arrow legs_length legs_angle start finish = *)
 let arrow_curvy ?(style = Arrow.default_style) start finish ~radians =
   if not (List.mem style.Arrow.arrowp [0.0; 0.5; 1.0]) then
-    failwith "Commands.make_arrow_curvy: arrowp must be either 0, 0.5 or 1"
-  else
-    let (left_leg, right_leg) =
-      Arrow.make_arrow_head ~legs_length:style.legs ~legs_angle:style.angle
-    in
-    let vec = Pt.sub finish start in
-    let vec_angle = Pt.angle_of_vec (start, finish) in
-    let shaft_start = Pt.add start (Pt.scale vec style.startp) in
-    let shaft_finish = Pt.add start (Pt.scale vec style.endp) in
-    let (c1, c2) =
-      Helpers.ubezier_control_points ~p1:shaft_start ~p2:shaft_finish ~radians
-    in
-    let (arrow_pos, rot_angle) =
-      if style.arrowp = 0.0 then (shaft_start, vec_angle +. radians)
-      else if style.arrowp = 0.5 then
-        let m = Helpers.bezier_midpoint shaft_start c1 shaft_finish c2 in
-        (m, vec_angle)
-      else
-        (* style.arrowp = 1.0 *)
-        (shaft_finish, Tools.pi -. (vec_angle +. radians))
-    in
-    let left_leg = Pt.add arrow_pos (Pt.rotate_vector rot_angle left_leg) in
-    let right_leg = Pt.add arrow_pos (Pt.rotate_vector rot_angle right_leg) in
-    group
-      [ bezier ~p1:shaft_start ~c1 ~p2:shaft_finish ~c2;
-        segment arrow_pos left_leg;
-        segment arrow_pos right_leg ]
+    invalid_arg "Commands.arrow_curvy: arrowp must be either 0, 0.5 or 1" ;
+  let (left_leg, right_leg) =
+    Arrow.make_arrow_head ~legs_length:style.legs ~legs_angle:style.angle
+  in
+  let vec = Pt.sub finish start in
+  let vec_angle = Pt.angle_of_vec (start, finish) in
+  let shaft_start = Pt.add start (Pt.scale vec style.startp) in
+  let shaft_finish = Pt.add start (Pt.scale vec style.endp) in
+  let (c1, c2) =
+    Helpers.ubezier_control_points ~p1:shaft_start ~p2:shaft_finish ~radians
+  in
+  let (arrow_pos, rot_angle) =
+    if style.arrowp = 0.0 then (shaft_start, vec_angle +. radians)
+    else if style.arrowp = 0.5 then
+      let m = Helpers.bezier_midpoint shaft_start c1 shaft_finish c2 in
+      (m, vec_angle)
+    else
+      (* style.arrowp = 1.0 *)
+      (shaft_finish, Tools.pi -. (vec_angle +. radians))
+  in
+  let left_leg = Pt.add arrow_pos (Pt.rotate_vector rot_angle left_leg) in
+  let right_leg = Pt.add arrow_pos (Pt.rotate_vector rot_angle right_leg) in
+  group
+    [ bezier ~p1:shaft_start ~c1 ~p2:shaft_finish ~c2;
+      segment arrow_pos left_leg;
+      segment arrow_pos right_leg ]
 
 (* multi-segments arrows *)
 
 let rec to_segments points =
   match points with
-  | [] -> failwith "Commands.Arrow.to_segments: not enough points"
+  | [] -> failwith "Commands.to_segments: not enough points"
   | [_] -> []
   | p1 :: p2 :: tl -> (p1, p2) :: to_segments (p2 :: tl)
 
@@ -520,14 +524,14 @@ let segmented_arrow ?(style = Arrow.default_style) points =
   let segments = to_segments points in
   let segments =
     match segments with
-    | [] -> failwith "Commands.Arrow.segmented_arrow: not enough points"
+    | [] -> failwith "Commands.segmented_arrow: not enough points"
     | (p1, p2) :: tl ->
         let vec = Pt.(p2 - p1) in
         let effective_start = Pt.add p1 (Pt.scale vec style.Arrow.startp) in
         (effective_start, p2) :: tl
   in
   match List.rev segments with
-  | [] -> failwith "Commands.Arrow.segmented_arrow: not enough points"
+  | [] -> failwith "Commands.segmented_arrow: not enough points"
   | (pn, pn') :: lt ->
       let start = pn and finish = pn' in
       let (left_leg, right_leg) =
@@ -567,11 +571,13 @@ let rec pp fmtr c =
         "Image(%a, %d x %d)"
         Pt.pp
         pos
-        (Image.xsize image)
-        (Image.ysize image)
+        (Image.xpixels image)
+        (Image.ypixels image)
   | Rotate { radians; cmd } -> fprintf fmtr "Rotate(%f, %a)" radians pp cmd
   | Translate { v; cmd } -> fprintf fmtr "Translate(%a, %a)" Pt.pp v pp cmd
   | Scale { xs; ys; cmd } -> fprintf fmtr "Scale(%f, %f, %a)" xs ys pp cmd
+  | Transform { mat; cmd } ->
+      fprintf fmtr "Transform(%a, %a)" Gg.M3.pp mat pp cmd
   | Group subcommands -> fprintf fmtr "Group(%a)" pp_list subcommands
 
 and pp_list fmtr cl =

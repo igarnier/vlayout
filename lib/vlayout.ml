@@ -97,6 +97,10 @@ module Commands : sig
   (** [scale ~xs ~ys cmd] is [cmd] scaled by the vector [(xs, ys)] *)
   val scale : xs:float -> ys:float -> t -> t
 
+  (** [transform mat cmd] is [cmd] after applying the transformation matrix
+      [mat] *)
+  val transform : Gg.M3.t -> t -> t
+
   (** [group cmds] is a group of commands. *)
   val group : t list -> t
 

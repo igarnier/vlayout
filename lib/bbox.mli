@@ -33,6 +33,9 @@ module type S = sig
   (** Rotate bbox by given angle in radians and recompute enclosing bbox. *)
   val rotate : float -> t -> t
 
+  (** [transform mat b] applies [mat] to the box. *)
+  val transform : Gg.M3.t -> t -> t
+
   (** Enlarges (or shrinks) a box by given scale factors on the x and y axes. *)
   val enlarge : float -> float -> t -> t
 

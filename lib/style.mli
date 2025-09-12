@@ -1,5 +1,5 @@
 (** A pattern describes how to stroke or fill a surface. *)
-type pattern =
+type pattern = private
   | Solid of { c : Color.t }
   | Linear of { p0 : Pt.t; p1 : Pt.t; stops : color_stops }
   | Radial of { c0 : Pt.t; c1 : Pt.t; r1 : float; stops : color_stops }
@@ -18,7 +18,7 @@ type dash_pattern = float array
     field describes the enclosing path and is mandatory. [width] and [dash]
     optionally describe the width and the dash pattern of the stroke, while the
     optional [fill] field describes how the enclosed surface must be drawn. *)
-type t =
+type t = private
   { stroke : pattern;
     width : float option;
     dash : dash_pattern option;
@@ -34,11 +34,19 @@ val make :
 
 (** Some useful patterns *)
 
-val solid_stroke : clr:Color.t -> pattern
+val solid : Color.t -> pattern
 
-val solid_fill : clr:Color.t -> pattern
+val linear : p0:Pt.t -> p1:Pt.t -> color_stops -> pattern
 
-val with_dash : style:t -> dash:dash_pattern -> t
+val radial : c0:Pt.t -> c1:Pt.t -> float -> color_stops -> pattern
+
+val with_dash : dash_pattern -> t -> t
+
+val with_stroke : pattern -> t -> t
+
+val with_fill : pattern -> t -> t
+
+val with_width : float -> t -> t
 
 val dot_dash : dash_pattern
 

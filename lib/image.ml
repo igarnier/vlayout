@@ -2,27 +2,28 @@ open Gg
 
 type t =
   { pixels : (int32, Bigarray.int32_elt, Bigarray.c_layout) Bigarray.Array1.t;
-    xsize : int;
-    ysize : int
+    xpixels : int;
+    ypixels : int
   }
 
-let create ~xsize ~ysize =
-  if xsize < 1 || ysize < 1 then
-    invalid_arg "Image.create: xsize and ysize must be at least 1" ;
+let create ~xpixels ~ypixels =
+  if xpixels < 1 || ypixels < 1 then
+    invalid_arg "Image.create: xpixels and ypixels must be at least 1" ;
   let pixels =
-    Bigarray.Array1.create Bigarray.int32 Bigarray.c_layout (xsize * ysize)
+    Bigarray.Array1.create Bigarray.int32 Bigarray.c_layout (xpixels * ypixels)
   in
-  { pixels; xsize; ysize }
+  { pixels; xpixels; ypixels }
 
-let xsize { xsize; _ } = xsize
+let xpixels { xpixels; _ } = xpixels
 
-let ysize { ysize; _ } = ysize
+let ypixels { ypixels; _ } = ypixels
 
 let pixels { pixels; _ } = pixels
 
-let bbox { xsize; ysize; _ } =
-  Box2.of_pts Pt.zero (Pt.pt (float xsize) (float ysize))
+let bbox { xpixels; ypixels; _ } =
+  Box2.of_pts Pt.zero (Pt.pt (float xpixels) (float ypixels))
 
-let get { pixels; xsize; ysize = _ } x y = pixels.{(y * xsize) + x}
+let get { pixels; xpixels; ypixels = _ } x y = pixels.{(y * xpixels) + x}
 
-let set { pixels; xsize; ysize = _ } x y clr = pixels.{(y * xsize) + x} <- clr
+let set { pixels; xpixels; ypixels = _ } x y clr =
+  pixels.{(y * xpixels) + x} <- clr

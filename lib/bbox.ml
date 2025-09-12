@@ -31,6 +31,9 @@ module type S = sig
   (** Rotate bbox by given angle in radians and recompute enclosing bbox. *)
   val rotate : float -> t -> t
 
+  (** [transform mat b] applies [mat] to the box. *)
+  val transform : Gg.M3.t -> t -> t
+
   (** Enlarges a box by given scale factors on the x and y axes. *)
   val enlarge : float -> float -> t -> t
 
@@ -99,6 +102,8 @@ let translate = Box2.move
 let rotate radians bbox = Box2.ltr (M2.rot2 radians) bbox
 
 let scale x y bbox = Box2.ltr (M2.scale2 (V2.v x y)) bbox
+
+let transform mat bbox = Box2.tr mat bbox
 
 let enlarge sx sy bbox =
   let w = Box2.w bbox in

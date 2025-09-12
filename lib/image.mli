@@ -1,12 +1,12 @@
 (** The type of images. *)
 type t
 
-(** [create ~xsize ~ysize] is an image with prescribed size. *)
-val create : xsize:int -> ysize:int -> t
+(** [create ~xpixels ~ypixels] is an image with prescribed pixel size. *)
+val create : xpixels:int -> ypixels:int -> t
 
-val xsize : t -> int
+val xpixels : t -> int
 
-val ysize : t -> int
+val ypixels : t -> int
 
 val pixels :
   t -> (int32, Bigarray.int32_elt, Bigarray.c_layout) Bigarray.Array1.t

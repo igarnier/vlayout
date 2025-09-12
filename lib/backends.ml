@@ -73,7 +73,7 @@ module Cairo = struct
             let y1 = (Pt.y p1 *. h) +. Pt.y (Bbox.sw bbox) in
             let p0 = Pt.pt x0 y0 in
             let p1 = Pt.pt x1 y1 in
-            Some (Style.Linear { p0; p1; stops })
+            Some (Style.linear ~p0 ~p1 stops)
         | Style.Radial { c0; c1; r1; stops } ->
             let w = Bbox.width bbox in
             let h = Bbox.height bbox in
@@ -84,7 +84,7 @@ module Cairo = struct
             let c0 = Pt.pt x0 y0 in
             let c1 = Pt.pt x1 y1 in
             let r1 = r1 *. w in
-            Some (Style.Radial { c0; c1; r1; stops }))
+            Some (Style.radial ~c0 ~c1 r1 stops))
 
   let render_box ctx mins maxs =
     let open Pt in
@@ -112,6 +112,17 @@ module Cairo = struct
     let mins = Pt.pt (x +. te.x_bearing) (y +. te.y_bearing) in
     let maxs = Pt.(mins + pt te.width te.height) in
     (pos, Bbox.box mins maxs)
+
+  let convert_matrix : Gg.M3.t -> Cairo.Matrix.t =
+   fun m3 ->
+    let open Gg in
+    let xx = M3.e00 m3 in
+    let xy = M3.e01 m3 in
+    let yx = M3.e10 m3 in
+    let yy = M3.e11 m3 in
+    let x0 = M3.e02 m3 in
+    let y0 = M3.e12 m3 in
+    { Cairo.xx; xy; yx; yy; x0; y0 }
 
   let rec render ctx fill_opt (cmd : Commands.t) =
     match cmd.desc with
@@ -174,8 +185,8 @@ module Cairo = struct
             ~h:(Bbox.height bbox)
         in
         let () = Cairo.clip ctx in
-        let xsize = Image.xsize image in
-        let ysize = Image.ysize image in
+        let xsize = Image.xpixels image in
+        let ysize = Image.ypixels image in
         let pixels =
           Bigarray.reshape_2
             (Bigarray.genarray_of_array1 (Image.pixels image))
@@ -208,6 +219,11 @@ module Cairo = struct
     | Scale { xs; ys; cmd } ->
         Cairo.save ctx ;
         Cairo.scale ctx xs ys ;
+        render ctx fill_opt cmd ;
+        Cairo.restore ctx
+    | Transform { mat; cmd } ->
+        Cairo.save ctx ;
+        Cairo.transform ctx (convert_matrix mat) ;
         render ctx fill_opt cmd ;
         Cairo.restore ctx
     | Group subcommands -> List.iter (render ctx fill_opt) subcommands

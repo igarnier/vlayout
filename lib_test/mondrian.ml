@@ -4,20 +4,16 @@ module B = Backends.Cairo
 
 let empty_box clr width height =
   let style =
-    Style.make
-      ~stroke:(Style.solid_stroke ~clr)
-      ~width:None
-      ~fill:None
-      ~dash:None
+    Style.make ~stroke:(Style.solid clr) ~width:None ~fill:None ~dash:None
   in
   C.style style (C.box ~mins:Pt.zero ~maxs:(Pt.pt width height))
 
 let filled_box stroke_clr filled_clr width height =
   let style =
     Style.make
-      ~stroke:(Style.solid_stroke ~clr:stroke_clr)
+      ~stroke:(Style.solid stroke_clr)
       ~width:None
-      ~fill:(Some (Style.solid_stroke ~clr:filled_clr))
+      ~fill:(Some (Style.solid filled_clr))
       ~dash:None
   in
   C.style style (C.box ~mins:Pt.zero ~maxs:(Pt.pt width height))
@@ -25,7 +21,7 @@ let filled_box stroke_clr filled_clr width height =
 let hgradient_box clr1 clr2 width height =
   let style =
     Style.make
-      ~stroke:Style.(solid_stroke ~clr:Color.black)
+      ~stroke:Style.(solid Color.black)
       ~width:None
       ~fill:(Some (Style.simple_horizontal_gradient ~clr1 ~clr2))
       ~dash:None
@@ -35,7 +31,7 @@ let hgradient_box clr1 clr2 width height =
 let vgradient_box clr1 clr2 width height =
   let style =
     Style.make
-      ~stroke:Style.(solid_stroke ~clr:Color.black)
+      ~stroke:Style.(solid Color.black)
       ~width:None
       ~fill:(Some (Style.simple_vertical_gradient ~clr1 ~clr2))
       ~dash:None
@@ -45,7 +41,7 @@ let vgradient_box clr1 clr2 width height =
 let vgradient_circle clr1 clr2 radius =
   let style =
     Style.make
-      ~stroke:Style.(solid_stroke ~clr:Color.black)
+      ~stroke:Style.(solid Color.black)
       ~width:None
       ~fill:(Some (Style.simple_vertical_gradient ~clr1 ~clr2))
       ~dash:None
@@ -55,7 +51,7 @@ let vgradient_circle clr1 clr2 radius =
 let hgradient_circle clr1 clr2 radius =
   let style =
     Style.make
-      ~stroke:Style.(solid_stroke ~clr:Color.black)
+      ~stroke:Style.(solid Color.black)
       ~width:None
       ~fill:(Some (Style.simple_horizontal_gradient ~clr1 ~clr2))
       ~dash:None
