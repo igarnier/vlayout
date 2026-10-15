@@ -24,7 +24,8 @@ let signed_float f =
   let f = Random.float f in
   if Random.bool () then f else ~-.f
 
-let clamp f = if f < 0.0 then ~-.f else if f > 1.0 then 1.0 -. f else f
+(* Reflect [f] back into [0, 1]; valid for f in [-1, 2]. *)
+let clamp f = if f < 0.0 then ~-.f else if f > 1.0 then 2.0 -. f else f
 
 let r = Color.r
 

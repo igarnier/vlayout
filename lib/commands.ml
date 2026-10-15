@@ -33,7 +33,7 @@ let w = West
 
 let s = South
 
-let e = South
+let e = East
 
 let sw = SouthWest
 
@@ -369,17 +369,21 @@ let transform mat cmd =
 let merge map1 map2 =
   Name_map.union (fun _name p1 p2 -> Some (List.rev_append p1 p2)) map1 map2
 
-let group = function
-  | [] -> failwith "Commands.group: empty list"
-  | cmds ->
-      let (box, points) =
-        List.fold_left
-          (fun (box, points) cmd ->
-            (Bbox.join box cmd.bbox, merge points cmd.points))
-          (Bbox.empty, Name_map.empty)
-          cmds
-      in
-      mktag (Group cmds) box points
+(* [group []] is a valid, empty command whose bounding box is [Bbox.empty]. *)
+let group cmds =
+  let (box, points) =
+    List.fold_left
+      (fun (box, points) cmd ->
+        (Bbox.join box cmd.bbox, merge points cmd.points))
+      (Bbox.empty, Name_map.empty)
+      cmds
+  in
+  mktag (Group cmds) box points
+
+(* Commands with an empty bounding box draw nothing and cannot be aligned;
+   they are kept (for their anchors) but excluded from alignment. *)
+let split_empty cmds =
+  List.partition (fun cmd -> not (Bbox.is_empty cmd.bbox)) cmds
 
 (* invariant: must preserve order of commands *)
 let halign l align_function =
@@ -395,8 +399,9 @@ let halign l align_function =
   halign_aux l []
 
 let hbox ~dx ?(pos = `Hcentered) cmds =
+  let (cmds, empty) = split_empty cmds in
   let aligned = halign cmds (Alignment.horiz_align pos dx) in
-  group aligned
+  group (aligned @ empty)
 
 (* invariant: must preserve order of commands *)
 let valign l align_function =
@@ -412,57 +417,58 @@ let valign l align_function =
   valign_aux l []
 
 let vbox ~dy ?(pos = `Vcentered) cmds =
+  let (cmds, empty) = split_empty cmds in
   let aligned = valign cmds (Alignment.vert_align pos dy) in
-  group aligned
+  group (aligned @ empty)
 
 let place relative_position point cmd =
   let bbox = cmd.bbox in
-  let width = Bbox.width bbox in
-  let height = Bbox.height bbox in
-  let base =
-    Helpers.base_of_positioned_box
-      height
-      width
-      { pos = point; relative_position }
-  in
-  let v = Pt.(base - Bbox.sw bbox) in
-  translate v cmd
+  if Bbox.is_empty bbox then cmd
+  else
+    let width = Bbox.width bbox in
+    let height = Bbox.height bbox in
+    let base =
+      Helpers.base_of_positioned_box
+        height
+        width
+        { pos = point; relative_position }
+    in
+    let v = Pt.(base - Bbox.sw bbox) in
+    translate v cmd
 
 let frame framing cmd =
   let bbox = cmd.bbox in
-  match framing with
-  | Scale_to_frame { frame } ->
-      let frame_width = Bbox.width frame in
-      let frame_height = Bbox.height frame in
-      let pw = Bbox.width bbox in
-      let ph = Bbox.height bbox in
-      let xx = frame_width /. pw in
-      let yy = frame_height /. ph in
-      let (x0, y0) = Gg.V2.to_tuple (Bbox.sw bbox) in
-      let x0 = x0 *. xx in
-      let y0 = y0 *. yy in
-      translate Pt.(sub (Bbox.sw frame) (pt x0 y0)) (scale ~xs:xx ~ys:yy cmd)
-  | Preserve_aspect { frame } ->
-      let frame_width = Bbox.width frame in
-      let frame_height = Bbox.height frame in
-      let pw = Bbox.width bbox in
-      let ph = Bbox.height bbox in
-      let xx = frame_width /. pw in
-      let yy = frame_height /. ph in
-      (* compute smallest scaling such that the figure fits in the
-               frame *)
-      let (scaling, direction) =
-        if xx >= 1.0 && yy >= 1.0 then
-          if xx < yy then (1. /. xx, `Horizontal) else (1. /. yy, `Vertical)
-        else if xx < yy then (xx, `Horizontal)
-        else (yy, `Vertical)
-      in
-      let (point, relative_position) =
-        match direction with
-        | `Horizontal -> (Bbox.w frame, West)
-        | `Vertical -> (Bbox.s frame, South)
-      in
-      place relative_position point (scale ~xs:scaling ~ys:scaling cmd)
+  if Bbox.is_empty bbox then cmd
+  else
+    match framing with
+    | Scale_to_frame { frame } ->
+        let frame_width = Bbox.width frame in
+        let frame_height = Bbox.height frame in
+        let pw = Bbox.width bbox in
+        let ph = Bbox.height bbox in
+        let xx = frame_width /. pw in
+        let yy = frame_height /. ph in
+        let (x0, y0) = Gg.V2.to_tuple (Bbox.sw bbox) in
+        let x0 = x0 *. xx in
+        let y0 = y0 *. yy in
+        translate Pt.(sub (Bbox.sw frame) (pt x0 y0)) (scale ~xs:xx ~ys:yy cmd)
+    | Preserve_aspect { frame } ->
+        let frame_width = Bbox.width frame in
+        let frame_height = Bbox.height frame in
+        let pw = Bbox.width bbox in
+        let ph = Bbox.height bbox in
+        let xx = frame_width /. pw in
+        let yy = frame_height /. ph in
+        (* largest uniform scaling such that the figure fits in the frame *)
+        let (scaling, direction) =
+          if xx < yy then (xx, `Horizontal) else (yy, `Vertical)
+        in
+        let (point, relative_position) =
+          match direction with
+          | `Horizontal -> (Bbox.w frame, West)
+          | `Vertical -> (Bbox.s frame, South)
+        in
+        place relative_position point (scale ~xs:scaling ~ys:scaling cmd)
 
 let arrow ?(style = Arrow.default_style) start finish =
   let (left_leg, right_leg) =
@@ -503,7 +509,7 @@ let arrow_curvy ?(style = Arrow.default_style) start finish ~radians =
       (m, vec_angle)
     else
       (* style.arrowp = 1.0 *)
-      (shaft_finish, Tools.pi -. (vec_angle +. radians))
+      (shaft_finish, vec_angle -. radians)
   in
   let left_leg = Pt.add arrow_pos (Pt.rotate_vector rot_angle left_leg) in
   let right_leg = Pt.add arrow_pos (Pt.rotate_vector rot_angle right_leg) in
@@ -592,11 +598,13 @@ let text_position pos width height =
 
 let center_to_page ~w ~h cmd =
   let b = cmd.bbox in
-  let boxw = Bbox.width b in
-  let boxh = Bbox.height b in
-  let deltah = 0.5 *. (h -. boxh) in
-  let deltaw = 0.5 *. (w -. boxw) in
-  translate (Pt.sub (Pt.pt deltaw deltah) (Bbox.sw b)) cmd
+  if Bbox.is_empty b then cmd
+  else
+    let boxw = Bbox.width b in
+    let boxh = Bbox.height b in
+    let deltah = 0.5 *. (h -. boxh) in
+    let deltaw = 0.5 *. (w -. boxw) in
+    translate (Pt.sub (Pt.pt deltaw deltah) (Bbox.sw b)) cmd
 
 let bind name cmd f =
   let pts = Option.value (Name_map.find_opt name cmd.points) ~default:[] in

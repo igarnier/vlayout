@@ -20,9 +20,9 @@ val cyan : t
 
 val gray : float -> t
 
-(** Enumerating colors. The 8 first colors of the enumeration are those above
-    (except white), the one after that are obtained by sampling around the
-    previous ones. *)
+(** Enumerating colors. The first 6 colors of the enumeration are [red],
+    [green], [blue], [black], [pink] and [cyan]; the following ones are obtained
+    by randomly perturbing those (using the global [Random] state). *)
 val enum_colors : unit -> t Seq.t
 
 val r : t -> float

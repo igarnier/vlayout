@@ -61,6 +61,7 @@ module Cairo = struct
   let adjust_fill_to_bbox bbox fill_opt =
     match fill_opt with
     | None -> fill_opt
+    | Some _ when Bbox.is_empty bbox -> fill_opt
     | Some patt -> (
         match patt with
         | Style.Solid _ -> fill_opt

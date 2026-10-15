@@ -11,6 +11,10 @@ module type S = sig
   (** The empty bounding box. *)
   val empty : t
 
+  (** [is_empty b] is [true] iff [b] is the empty bounding box. Most functions
+      below raise [Invalid_argument] on the empty box. *)
+  val is_empty : t -> bool
+
   (** Returns the center of a bounding box. *)
   val center : t -> Pt.t
 
