@@ -470,53 +470,62 @@ let frame framing cmd =
         in
         place relative_position point (scale ~xs:scaling ~ys:scaling cmd)
 
+(* [degenerate p1 p2] is [true] iff the direction from [p1] to [p2] is
+   undefined. Arrows between such points have no direction: they draw
+   nothing. *)
+let degenerate p1 p2 = Pt.norm (Pt.sub p2 p1) = 0.0
+
 let arrow ?(style = Arrow.default_style) start finish =
-  let (left_leg, right_leg) =
-    Arrow.make_arrow_head
-      ~legs_length:style.Arrow.legs
-      ~legs_angle:style.Arrow.angle
-  in
-  let vec = Pt.sub finish start in
-  let vec_angle = Pt.angle_of_vec (start, finish) in
-  let shaft_start = Pt.add start (Pt.scale vec style.startp) in
-  let shaft_finish = Pt.add start (Pt.scale vec style.endp) in
-  let arrow_pos = Pt.add start (Pt.scale vec style.arrowp) in
-  let left_leg = Pt.add arrow_pos (Pt.rotate_vector vec_angle left_leg) in
-  let right_leg = Pt.add arrow_pos (Pt.rotate_vector vec_angle right_leg) in
-  group
-    [ segment shaft_start shaft_finish;
-      segment arrow_pos left_leg;
-      segment arrow_pos right_leg ]
+  if degenerate start finish then group []
+  else
+    let (left_leg, right_leg) =
+      Arrow.make_arrow_head
+        ~legs_length:style.Arrow.legs
+        ~legs_angle:style.Arrow.angle
+    in
+    let vec = Pt.sub finish start in
+    let vec_angle = Pt.angle_of_vec (start, finish) in
+    let shaft_start = Pt.add start (Pt.scale vec style.startp) in
+    let shaft_finish = Pt.add start (Pt.scale vec style.endp) in
+    let arrow_pos = Pt.add start (Pt.scale vec style.arrowp) in
+    let left_leg = Pt.add arrow_pos (Pt.rotate_vector vec_angle left_leg) in
+    let right_leg = Pt.add arrow_pos (Pt.rotate_vector vec_angle right_leg) in
+    group
+      [ segment shaft_start shaft_finish;
+        segment arrow_pos left_leg;
+        segment arrow_pos right_leg ]
 
 (* let make_arrow legs_length legs_angle start finish = *)
 let arrow_curvy ?(style = Arrow.default_style) start finish ~radians =
   if not (List.mem style.Arrow.arrowp [0.0; 0.5; 1.0]) then
     invalid_arg "Commands.arrow_curvy: arrowp must be either 0, 0.5 or 1" ;
-  let (left_leg, right_leg) =
-    Arrow.make_arrow_head ~legs_length:style.legs ~legs_angle:style.angle
-  in
-  let vec = Pt.sub finish start in
-  let vec_angle = Pt.angle_of_vec (start, finish) in
-  let shaft_start = Pt.add start (Pt.scale vec style.startp) in
-  let shaft_finish = Pt.add start (Pt.scale vec style.endp) in
-  let (c1, c2) =
-    Helpers.ubezier_control_points ~p1:shaft_start ~p2:shaft_finish ~radians
-  in
-  let (arrow_pos, rot_angle) =
-    if style.arrowp = 0.0 then (shaft_start, vec_angle +. radians)
-    else if style.arrowp = 0.5 then
-      let m = Helpers.bezier_midpoint shaft_start c1 shaft_finish c2 in
-      (m, vec_angle)
-    else
-      (* style.arrowp = 1.0 *)
-      (shaft_finish, vec_angle -. radians)
-  in
-  let left_leg = Pt.add arrow_pos (Pt.rotate_vector rot_angle left_leg) in
-  let right_leg = Pt.add arrow_pos (Pt.rotate_vector rot_angle right_leg) in
-  group
-    [ bezier ~p1:shaft_start ~c1 ~p2:shaft_finish ~c2;
-      segment arrow_pos left_leg;
-      segment arrow_pos right_leg ]
+  if degenerate start finish then group []
+  else
+    let (left_leg, right_leg) =
+      Arrow.make_arrow_head ~legs_length:style.legs ~legs_angle:style.angle
+    in
+    let vec = Pt.sub finish start in
+    let vec_angle = Pt.angle_of_vec (start, finish) in
+    let shaft_start = Pt.add start (Pt.scale vec style.startp) in
+    let shaft_finish = Pt.add start (Pt.scale vec style.endp) in
+    let (c1, c2) =
+      Helpers.ubezier_control_points ~p1:shaft_start ~p2:shaft_finish ~radians
+    in
+    let (arrow_pos, rot_angle) =
+      if style.arrowp = 0.0 then (shaft_start, vec_angle +. radians)
+      else if style.arrowp = 0.5 then
+        let m = Helpers.bezier_midpoint shaft_start c1 shaft_finish c2 in
+        (m, vec_angle)
+      else
+        (* style.arrowp = 1.0 *)
+        (shaft_finish, vec_angle -. radians)
+    in
+    let left_leg = Pt.add arrow_pos (Pt.rotate_vector rot_angle left_leg) in
+    let right_leg = Pt.add arrow_pos (Pt.rotate_vector rot_angle right_leg) in
+    group
+      [ bezier ~p1:shaft_start ~c1 ~p2:shaft_finish ~c2;
+        segment arrow_pos left_leg;
+        segment arrow_pos right_leg ]
 
 (* multi-segments arrows *)
 
@@ -526,36 +535,50 @@ let rec to_segments points =
   | [_] -> []
   | p1 :: p2 :: tl -> (p1, p2) :: to_segments (p2 :: tl)
 
+(* Remove consecutive repetitions of a point: they would yield degenerate
+   segments, which draw nothing and have no direction. *)
+let rec remove_repeated points =
+  match points with
+  | p1 :: p2 :: tl when degenerate p1 p2 -> remove_repeated (p1 :: tl)
+  | p :: tl -> p :: remove_repeated tl
+  | [] -> []
+
 let segmented_arrow ?(style = Arrow.default_style) points =
-  let segments = to_segments points in
-  let segments =
-    match segments with
-    | [] -> failwith "Commands.segmented_arrow: not enough points"
-    | (p1, p2) :: tl ->
-        let vec = Pt.(p2 - p1) in
-        let effective_start = Pt.add p1 (Pt.scale vec style.Arrow.startp) in
-        (effective_start, p2) :: tl
-  in
-  match List.rev segments with
-  | [] -> failwith "Commands.segmented_arrow: not enough points"
-  | (pn, pn') :: lt ->
-      let start = pn and finish = pn' in
-      let (left_leg, right_leg) =
-        Arrow.make_arrow_head ~legs_length:style.legs ~legs_angle:style.angle
-      in
-      let vec = Pt.sub finish start in
-      let vec_angle = Pt.angle_of_vec (start, finish) in
-      let shaft_finish = Pt.add start (Pt.scale vec style.endp) in
-      let arrow_pos = Pt.add start (Pt.scale vec style.arrowp) in
-      let left_leg = Pt.add arrow_pos (Pt.rotate_vector vec_angle left_leg) in
-      let right_leg = Pt.add arrow_pos (Pt.rotate_vector vec_angle right_leg) in
-      let arrow =
-        [ segment pn shaft_finish;
-          segment arrow_pos left_leg;
-          segment arrow_pos right_leg ]
-      in
-      let segments = List.map (fun (p1, p2) -> segment p1 p2) lt in
-      group (segments @ arrow)
+  (match points with
+  | [] | [_] -> failwith "Commands.segmented_arrow: not enough points"
+  | _ -> ()) ;
+  match to_segments (remove_repeated points) with
+  | [] -> group []
+  | (p1, p2) :: tl as segments -> (
+      (* The head follows the direction of the last segment, taken before
+         [startp] is applied: the adjusted segment may be degenerate. *)
+      let vec_angle = Pt.angle_of_vec (List.hd (List.rev segments)) in
+      let vec = Pt.(p2 - p1) in
+      let effective_start = Pt.add p1 (Pt.scale vec style.Arrow.startp) in
+      match List.rev ((effective_start, p2) :: tl) with
+      | [] -> failwith "Commands.segmented_arrow: not enough points"
+      | (start, finish) :: lt ->
+          let (left_leg, right_leg) =
+            Arrow.make_arrow_head
+              ~legs_length:style.legs
+              ~legs_angle:style.angle
+          in
+          let vec = Pt.sub finish start in
+          let shaft_finish = Pt.add start (Pt.scale vec style.endp) in
+          let arrow_pos = Pt.add start (Pt.scale vec style.arrowp) in
+          let left_leg =
+            Pt.add arrow_pos (Pt.rotate_vector vec_angle left_leg)
+          in
+          let right_leg =
+            Pt.add arrow_pos (Pt.rotate_vector vec_angle right_leg)
+          in
+          let arrow =
+            [ segment start shaft_finish;
+              segment arrow_pos left_leg;
+              segment arrow_pos right_leg ]
+          in
+          let segments = List.map (fun (p1, p2) -> segment p1 p2) lt in
+          group (segments @ arrow))
 
 (* ------------------------------------------------------------ *)
 
