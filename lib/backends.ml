@@ -191,8 +191,8 @@ module Cairo = struct
         let pixels =
           Bigarray.reshape_2
             (Bigarray.genarray_of_array1 (Image.pixels image))
-            xsize
             ysize
+            xsize
         in
         let surf =
           Cairo.Image.create_for_data32 ~w:xsize ~h:ysize ~alpha:false pixels
