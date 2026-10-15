@@ -1,3 +1,3 @@
 (tests
- (names mondrian framing arrows regressions)
+ (names mondrian framing arrows regressions backend_regressions)
  (libraries gg vlayout cairo2))
