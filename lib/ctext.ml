@@ -24,13 +24,16 @@ let font_spec ?(slant = Cairo.Upright) ?(weight = Cairo.Normal) family =
   | Some face -> face
 
 let font family slant weight size =
-  match Hashtbl.find_opt font_table (family, slant, weight, size) with
+  let key = (family, slant, weight, size) in
+  match Hashtbl.find_opt font_table key with
   | None ->
       let face = font_spec ~slant ~weight family in
       let mat1 = Cairo.Matrix.init_scale size ~-.size in
       let mat2 = Cairo.Matrix.init_identity () in
       let opts = Cairo.Font_options.create () in
-      Cairo.Scaled_font.create face mat1 mat2 opts
+      let font = Cairo.Scaled_font.create face mat1 mat2 opts in
+      Hashtbl.add font_table key font ;
+      font
   | Some font -> font
 
 let create ?(size = 10.0) ?(family = "fixed") ?(slant = Cairo.Upright)
