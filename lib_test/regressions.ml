@@ -83,4 +83,31 @@ let () =
   in
   check "enum_colors: components in [0, 1]" ok
 
+(* Zero-length arrows have no direction: they draw nothing instead of
+   producing NaN coordinates that poison enclosing layouts. *)
+let () =
+  let p = Pt.pt 5.0 5.0 in
+  check "arrow p p: empty" (Bbox.is_empty (C.bbox (C.arrow p p))) ;
+  check
+    "arrow_curvy p p: empty"
+    (Bbox.is_empty (C.bbox (C.arrow_curvy p p ~radians:0.5))) ;
+  let row = C.hbox ~dx:10.0 [unit_box; C.arrow p p; unit_box] in
+  check
+    "hbox with zero-length arrow: width"
+    (close (Bbox.width (C.bbox row)) 30.0) ;
+  let a = Pt.zero and b = Pt.pt 100.0 0.0 in
+  check
+    "segmented_arrow: repeated last point ignored"
+    (Gg.Box2.equal
+       (C.bbox (C.segmented_arrow [a; b; b]))
+       (C.bbox (C.segmented_arrow [a; b]))) ;
+  check
+    "segmented_arrow: repeated inner point ignored"
+    (Gg.Box2.equal
+       (C.bbox (C.segmented_arrow [a; a; b]))
+       (C.bbox (C.segmented_arrow [a; b]))) ;
+  check
+    "segmented_arrow: single distinct point is empty"
+    (Bbox.is_empty (C.bbox (C.segmented_arrow [a; a])))
+
 let () = if !failures > 0 then exit 1

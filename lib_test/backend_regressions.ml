@@ -153,4 +153,17 @@ let () =
     (a.Ctext.font == b.Ctext.font)
     "two Ctext.create calls produced distinct fonts"
 
+(* Rendering text must leave the current path empty: the next path (e.g. a
+   circle, through [Cairo.arc]) would otherwise start with a stray line from
+   the end of the text. *)
+let () =
+  let surface = Cairo.Image.create Cairo.Image.RGB24 ~w:100 ~h:100 in
+  let ctx = Cairo.create surface in
+  Backends.Cairo.render ctx (C.text ~size:10.0 C.sw (Pt.pt 10.0 50.0) "hello") ;
+  let elements = Array.length (Cairo.Path.to_array (Cairo.Path.copy ctx)) in
+  check
+    "text leaves an empty path"
+    (elements = 0)
+    (Printf.sprintf "%d path elements left" elements)
+
 let () = if !failures > 0 then exit 1
