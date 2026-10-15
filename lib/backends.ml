@@ -26,37 +26,33 @@ module Cairo = struct
           stops ;
         Cairo.set_source ctx patt
 
-  (* Perform the stroke at uniform scale *)
+  (* Perform the stroke at uniform scale: line width and dashes are measured in
+     device units, whatever the current transformation. The pen is round, so
+     discarding rotations and translations along with scalings is harmless;
+     the current path is stored in device space and is not affected. *)
   let stroke_uniform_scale ctx =
     Cairo.save ctx ;
-    let m = Cairo.get_matrix ctx in
-    let m = { m with xx = 1.0; yy = 1.0 } in
-    Cairo.set_matrix ctx m ;
-    (* let ux, uy = Cairo.device_to_user_distance ctx 1. 1. in *)
-    (* Cairo.set_line_width ctx (max ux uy); *)
+    Cairo.identity_matrix ctx ;
     Cairo.stroke ctx ;
     Cairo.restore ctx
 
-  let stroke_preserve_uniform_scale ctx =
-    Cairo.save ctx ;
-    let m = Cairo.get_matrix ctx in
-    let m = { m with xx = 1.0; yy = 1.0 } in
-    Cairo.set_matrix ctx m ;
-    let (ux, uy) = Cairo.device_to_user_distance ctx 1. 1. in
-    Cairo.set_line_width ctx (max ux uy) ;
-    Cairo.stroke_preserve ctx ;
-    Cairo.restore ctx
-
+  (* [fill_opt] carries the fill pattern together with the user-space matrix
+     in effect at the [Style] node that introduced it: the pattern coordinates
+     are expressed in that space, not in the (possibly transformed) space of
+     the leaf being drawn. The fill is painted first so that the stroke is
+     drawn over it with its full width. *)
   let perform_stroke_and_fill_opt ctx fill_opt =
-    match fill_opt with
-    | None -> stroke_uniform_scale ctx
-    | Some fill_pattern ->
-        stroke_preserve_uniform_scale ctx ;
-        Cairo.stroke_preserve ctx ;
+    (match fill_opt with
+    | None -> ()
+    | Some (fill_pattern, style_matrix) ->
         Cairo.save ctx ;
+        (* The current path is stored in device space and is not affected by
+           changing the matrix. *)
+        Cairo.set_matrix ctx style_matrix ;
         set_pattern ctx fill_pattern ;
-        Cairo.fill ctx ;
-        Cairo.restore ctx
+        Cairo.fill_preserve ctx ;
+        Cairo.restore ctx) ;
+    stroke_uniform_scale ctx
 
   let adjust_fill_to_bbox bbox fill_opt =
     match fill_opt with
@@ -125,7 +121,7 @@ module Cairo = struct
     let y0 = M3.e12 m3 in
     { Cairo.xx; xy; yx; yy; x0; y0 }
 
-  let rec render ctx fill_opt (cmd : Commands.t) =
+  let rec render ctx (fill_opt : (Style.pattern * Cairo.matrix) option) (cmd : Commands.t) =
     match cmd.desc with
     | Circle { center; radius } ->
         let x = Pt.x center and y = Pt.y center in
@@ -152,7 +148,10 @@ module Cairo = struct
           perform_stroke_and_fill_opt ctx fill_opt
     | Style { style; cmd } ->
         let bbox = cmd.bbox in
-        let adjusted_fill = adjust_fill_to_bbox bbox style.Style.fill in
+        let adjusted_fill =
+          adjust_fill_to_bbox bbox style.Style.fill
+          |> Option.map (fun patt -> (patt, Cairo.get_matrix ctx))
+        in
         Cairo.save ctx ;
         set_pattern ctx style.Style.stroke ;
         (match style.dash with

@@ -68,7 +68,18 @@ let () =
          (pp_rgb right))
   in
   test "style outside translate" (C.translate v (C.style sty box)) ;
-  test "style inside translate" (C.style sty (C.translate v box))
+  test "style inside translate" (C.style sty (C.translate v box)) ;
+  let small = C.box ~mins:Pt.zero ~maxs:(Pt.pt 20.0 20.0) in
+  test
+    "style over scale"
+    (C.translate v (C.style sty (C.scale ~xs:2.0 ~ys:2.0 small))) ;
+  (* A single gradient spans the whole group. *)
+  let half = C.box ~mins:Pt.zero ~maxs:(Pt.pt 20.0 40.0) in
+  test
+    "style over group"
+    (C.style
+       sty
+       (C.group [C.translate v half; C.translate (Pt.pt 70.0 50.0) half]))
 
 (* Stroke width must not depend on rotation. *)
 let () =
@@ -99,6 +110,24 @@ let () =
     (t_ref = t_rot)
     (Printf.sprintf
        "vertical segment: %dpx, horizontal rotated by 90deg: %dpx"
+       t_ref
+       t_rot) ;
+  let d = 60.0 /. sqrt 2.0 in
+  let diagonal = C.style sty (C.segment Pt.zero (Pt.pt d d)) in
+  let t_ref = thickness_on_row 50 (render (C.translate (Pt.pt 20.0 20.0) diagonal)) in
+  let t_rot =
+    thickness_on_row
+      50
+      (render
+         (C.translate
+            (Pt.pt 20.0 20.0)
+            (C.rotate ~radians:(Float.pi /. 4.0) horizontal)))
+  in
+  check
+    "stroke width invariant under 45deg rotation"
+    (t_ref = t_rot)
+    (Printf.sprintf
+       "diagonal segment: %dpx, horizontal rotated by 45deg: %dpx"
        t_ref
        t_rot)
 
