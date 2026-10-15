@@ -26,6 +26,8 @@ val dot : t -> t -> float
 
 val normalize : t -> t
 
+(** [angle_of_vec (p1, p2)] is the angle of the vector from [p1] to [p2], in
+    [\[-pi, pi\]]. It is [nan] if [p1] and [p2] are equal. *)
 val angle_of_vec : t * t -> float
 
 val rotate_vector : float -> t -> t
