@@ -110,4 +110,26 @@ let () =
     "segmented_arrow: single distinct point is empty"
     (Bbox.is_empty (C.bbox (C.segmented_arrow [a; a])))
 
+(* A curvy arrow with an empty shaft ([startp = endp]) draws only its head.
+   Custom arrow styles are not exposed by [Vlayout.Commands], hence the use of
+   the internal module. *)
+let () =
+  let module IC = Vlayout__Commands in
+  let style =
+    IC.Arrow.style ~startp:0.5 ~endp:0.5 ~arrowp:1.0 ~legs:10.0 ~angle:0.6
+  in
+  let cmd =
+    IC.arrow_curvy ~style Pt.zero (Pt.pt 100.0 0.0) ~radians:0.5
+  in
+  (* Note: a NaN control point would not show in the bounding box, as
+     [Gg.Box2.union] ignores NaN coordinates; hence the structural check. *)
+  (match cmd.IC.desc with
+  | IC.Group [{ desc = IC.Segment _; _ }; { desc = IC.Segment _; _ }] ->
+      check "arrow_curvy empty shaft: head only" true
+  | _ -> check "arrow_curvy empty shaft: head only" false) ;
+  (* The head sits at the (empty) shaft, at the middle of [start, finish]. *)
+  check
+    "arrow_curvy empty shaft: head at shaft"
+    (close (Pt.x (Bbox.ne (IC.bbox cmd))) 50.0)
+
 let () = if !failures > 0 then exit 1
