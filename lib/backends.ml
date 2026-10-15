@@ -145,7 +145,11 @@ module Cairo = struct
           Cairo.Scaled_font.set ctx text.Ctext.font ;
           Cairo.show_text ctx text.str ;
           Cairo.restore ctx ;
-          perform_stroke_and_fill_opt ctx fill_opt
+          (* [show_text] draws the text with the current source (the stroke
+             pattern) and leaves a current point, which is not covered by
+             [save]/[restore]: clear it so that the next path does not start
+             from there. *)
+          Cairo.Path.clear ctx
     | Style { style; cmd } ->
         let bbox = cmd.bbox in
         let adjusted_fill =
