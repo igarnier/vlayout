@@ -508,24 +508,36 @@ let arrow_curvy ?(style = Arrow.default_style) start finish ~radians =
     let vec_angle = Pt.angle_of_vec (start, finish) in
     let shaft_start = Pt.add start (Pt.scale vec style.startp) in
     let shaft_finish = Pt.add start (Pt.scale vec style.endp) in
-    let (c1, c2) =
-      Helpers.ubezier_control_points ~p1:shaft_start ~p2:shaft_finish ~radians
+    (* Tangent angle of the shaft at the head. The shaft keeps its shape
+       whatever its length, so this also holds for an empty shaft. *)
+    let rot_angle =
+      if style.arrowp = 0.0 then vec_angle +. radians
+      else if style.arrowp = 0.5 then vec_angle
+      else (* style.arrowp = 1.0 *)
+        vec_angle -. radians
     in
-    let (arrow_pos, rot_angle) =
-      if style.arrowp = 0.0 then (shaft_start, vec_angle +. radians)
-      else if style.arrowp = 0.5 then
-        let m = Helpers.bezier_midpoint shaft_start c1 shaft_finish c2 in
-        (m, vec_angle)
-      else
-        (* style.arrowp = 1.0 *)
-        (shaft_finish, vec_angle -. radians)
+    let head arrow_pos =
+      let left_leg = Pt.add arrow_pos (Pt.rotate_vector rot_angle left_leg) in
+      let right_leg = Pt.add arrow_pos (Pt.rotate_vector rot_angle right_leg) in
+      [segment arrow_pos left_leg; segment arrow_pos right_leg]
     in
-    let left_leg = Pt.add arrow_pos (Pt.rotate_vector rot_angle left_leg) in
-    let right_leg = Pt.add arrow_pos (Pt.rotate_vector rot_angle right_leg) in
-    group
-      [ bezier ~p1:shaft_start ~c1 ~p2:shaft_finish ~c2;
-        segment arrow_pos left_leg;
-        segment arrow_pos right_leg ]
+    if degenerate shaft_start shaft_finish then
+      (* Empty shaft ([startp = endp]): only the head is drawn. *)
+      group (head shaft_start)
+    else
+      let (c1, c2) =
+        Helpers.ubezier_control_points
+          ~p1:shaft_start
+          ~p2:shaft_finish
+          ~radians
+      in
+      let arrow_pos =
+        if style.arrowp = 0.0 then shaft_start
+        else if style.arrowp = 0.5 then
+          Helpers.bezier_midpoint shaft_start c1 shaft_finish c2
+        else shaft_finish
+      in
+      group (bezier ~p1:shaft_start ~c1 ~p2:shaft_finish ~c2 :: head arrow_pos)
 
 (* multi-segments arrows *)
 
